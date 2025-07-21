@@ -1,0 +1,758 @@
+<style>
+  /* Basic Setup & Fonts */
+  .triage-table-container {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #F9FAFB;
+    padding: 1.5rem;
+    color: #374151;
+  }
+
+  /* Header */
+  .triage-table-container h1 {
+    font-size: 1.875rem;
+    font-weight: 300;
+    padding: 1rem;
+    background-color: white;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .triage-table-container h2 {
+    font-size: 1.5rem;
+    font-weight: 300;
+    margin-bottom: 1rem;
+    margin-top: 2rem;
+    padding: 0 0.5rem;
+  }
+  
+  /* Controls: Search & Filter */
+  .triage-controls {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    margin-bottom: 1rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    align-items: end;
+  }
+  .triage-controls label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+  .triage-controls input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+  }
+  .triage-controls .filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .triage-controls .filter-buttons button {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 9999px;
+    border: 1px solid #D1D5DB;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .triage-controls .filter-buttons button:hover {
+    background-color: #F3F4F6;
+  }
+  .triage-controls .filter-buttons button.active {
+    background-color: #3B82F6;
+    color: white;
+    border-color: #3B82F6;
+  }
+
+  /* Shared Grid Wrapper & Grid Styles */
+  .triage-grid-wrapper {
+    overflow-x: auto;
+    padding-bottom: 1rem;
+  }
+  .triage-grid {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    grid-template-columns: repeat(14, minmax(80px, 1fr));
+    min-width: 1000px;
+  }
+  .main-grid {
+      grid-template-rows: repeat(5, 100px);
+  }
+  .platforms-grid {
+    grid-template-rows: 100px;
+  }
+
+  /* Element Card Styling */
+  .element-card {
+    position: relative;
+    border: 2px solid transparent;
+    border-radius: 0.375rem;
+    padding: 0.375rem;
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    height: 100px; /* Use a fixed height for consistency */
+    box-sizing: border-box;
+  }
+  .element-card:hover {
+    transform: scale(1.05); /* Slightly less aggressive hover for list view */
+    z-index: 10;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  }
+  .element-card.filtered-out {
+    opacity: 0.2;
+    filter: grayscale(1);
+  }
+  .element-card:hover.filtered-out {
+    opacity: 1;
+    filter: grayscale(0);
+  }
+  .element-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 0.625rem;
+  }
+  .element-card .id { font-weight: 500; }
+  .element-card .weight { font-weight: 700; }
+  .element-card .symbol {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: auto 0;
+  }
+  .element-card .name {
+    font-size: 0.5625rem;
+    line-height: 1.2;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  
+  /* Modal Styles */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 50;
+  }
+  .modal-content {
+    position: relative;
+    max-width: 42rem;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+    padding: 2rem;
+  }
+  .modal-close-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 9999px;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+  .modal-close-btn:hover { background-color: #F3F4F6; }
+  .modal-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .modal-header .card-preview {
+    flex-shrink: 0;
+    width: 7rem;
+    height: 7rem;
+    border-radius: 0.5rem;
+    border-width: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-header .card-preview .id { font-size: 0.875rem; opacity: 0.8; }
+  .modal-header .card-preview .symbol { font-size: 2.25rem; font-weight: 700; }
+  .modal-header .card-preview .weight { font-size: 0.75rem; opacity: 0.8; }
+  .modal-header .details h2 { font-size: 1.875rem; font-weight: 300; margin-top: 0.25rem; margin-bottom: 0.5rem; }
+  .modal-header .details .category-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-width: 1px;
+  }
+  .modal-body h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .modal-body p { margin: 0 0 1.25rem 0; line-height: 1.6; }
+  .modal-body .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #E5E7EB;
+    margin-top: 1.25rem;
+  }
+
+  /* Modal Logo Section */
+ .modal-body .logo-section {
+   padding-bottom: 1.25rem;
+ }
+ .modal-logo-container {
+   display: grid;
+   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+   gap: 1.5rem;
+   align-items: center;
+   justify-items: center;
+   padding-top: 0.5rem;
+ }
+ .modal-logo-container a {
+   display: block;
+   padding: 0.5rem;
+   border-radius: 0.375rem;
+   background-color: #F9FAFB;
+   transition: transform 0.2s, box-shadow 0.2s;
+ }
+ .modal-logo-container a:hover {
+   transform: translateY(-4px);
+   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+ }
+ .modal-logo-container img {
+   max-width: 100%;
+   height: 40px;
+   object-fit: contain;
+ }
+  
+  /* --- MOBILE STYLES --- */
+  @media (max-width: 767px) {
+    .triage-table-container {
+      padding: 0.5rem;
+    }
+    .triage-table-container h1 {
+      font-size: 1.5rem;
+      padding: 0.75rem;
+    }
+    .triage-controls {
+      grid-template-columns: 1fr; /* Force single column on mobile */
+    }
+    .triage-grid-wrapper {
+      overflow-x: visible; /* Disable horizontal scroll on mobile */
+    }
+    .triage-grid {
+      grid-template-columns: repeat(2, 1fr); /* 2-column list view */
+      min-width: 0; /* Allow grid to shrink */
+      grid-auto-rows: 100px; /* Let rows size automatically */
+      gap: 0.5rem;
+    }
+    .main-grid, .platforms-grid {
+        grid-template-rows: unset; /* Unset fixed rows */
+    }
+    .platforms-grid {
+      padding-top: 0;
+    }
+    .triage-table-container h2 {
+      padding: 0;
+      margin-top: 1.5rem;
+    }
+    .modal-body .info-grid {
+      grid-template-columns: 1fr; /* Ensure modal grid is single column */
+    }
+  }
+</style>
+
+<div id="triage-table-root" class="triage-table-container">
+  </div>
+
+<script>
+  (function() {
+    // --- RESPONSIVE CHECK ---
+    const isMobile = window.innerWidth <= 767;
+  
+    // --- DATA ---
+    const channels = [
+      { id: 1, symbol: "AD", name: "Advisory Firms", weight: 5, category: "Service (SoW)", cost: 5, usage: "Overused", description: "General advisory firms who provide advice to senior representatives, or", activities: "Advisory firms provide expert guidance on complex business strategies such as market entry and digital transformation, addressing the problem of limited strategic expertise internally.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 14, symbol: "TEC", name: "Specialist Technology Providers", weight: 5, category: "Service (SoW)", cost: 4, usage: "Overused", description: "Smaller firms that specialise in technology services", activities: "Specialist technology providers offer deep expertise in niche tech areas, solving complex technical challenges.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 15, symbol: "CTF", name: "Boutique Technology Firms", weight: 5, category: "Service (SoW)", cost: 4, usage: "Overused", description: "Technology firms who are specialised in a specific area of delivery", activities: "Boutique technology firms deliver innovative solutions in specialized areas like AI or blockchain, providing cutting-edge capabilities.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 16, symbol: "RCF", name: "Risk Consulting Firms", weight: 5, category: "Service (SoW)", cost: 5, usage: "Overused", description: "Firms that specialise in risk management and reporting", activities: "Risk consulting firms identify and mitigate business risks, ensuring compliance and protecting against potential threats.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 17, symbol: "CCF", name: "Cyber Consulting Firms", weight: 5, category: "Service (SoW)", cost: 4, usage: "Overused", description: "Firms that specialise in cyber management and forensics", activities: "Cyber consulting firms protect against digital threats and respond to security incidents, safeguarding critical data and systems.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 18, symbol: "LS", name: "Legal Service Providers", weight: 5, category: "Service (SoW)", cost: 3, usage: "Neutral", description: "Firms that provide legal services", activities: "Legal service providers offer specialized legal expertise and representation, ensuring compliance and protecting business interests.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 19, symbol: "RM", name: "Regulatory Management Firms", weight: 5, category: "Service (SoW)", cost: 3, usage: "Neutral", description: "Firms that provide specialist regulatory management skills", activities: "Regulatory management firms navigate complex compliance requirements, helping organizations avoid penalties and maintain licenses.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 27, symbol: "BEN", name: "Benchmarking or intelligence", weight: 5, category: "AI and Data", cost: 5, usage: "Overused", description: "Data services providing benchmarks", activities: "Benchmarking services provide competitive intelligence and performance metrics, enabling data-driven decision making.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 2, symbol: "MC", name: "Management Consulting Firms", weight: 4, category: "Service (SoW)", cost: 4, usage: "Overused", description: "Management consulting companies - could be large and also small, but are always ‘generic’ in nature", activities: "These companies analyze and improve business processes and solve efficiency issues, helping optimize company-wide performance.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 3, symbol: "PS", name: "Professional Services Firms", weight: 4, category: "Service (SoW)", cost: 4, usage: "Overused", description: "Companies that provide services that require some sort of professional accreditation", activities: "Professional services firms deliver specialized skills in auditing, compliance, and certification, ensuring accuracy in financial and legal matters to meet regulatory standards.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 8, symbol: "IT", name: "IT Outsource", weight: 4, category: "Service (SoW)", cost: 4, usage: "Overused", description: "Firms, which are larger and multi-geography, who can provide both talent and services", activities: "IT outsourcing companies provide technical infrastructure support and software services, addressing the need for specialized IT resources without full-time hiring.", type: "Non employee", subtype: "Both", contractType: "SoW and Contract" },
+      { id: 12, symbol: "ISP", name: "IT Service Providers", weight: 4, category: "Service (SoW)", cost: 4, usage: "Underused", description: "Smaller IT firms and those providing specific IT services like telecoms and connectivity", activities: "IT service providers deliver specialized technology solutions and connectivity services, ensuring reliable technical infrastructure.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 21, symbol: "IC", name: "Internal Consulting Bench", weight: 4, category: "Employee", cost: 2, usage: "Overused", description: "Staff members who are employed by the business but deployed in an agile manner as and when required", activities: "Internal consulting benches deploy existing talent flexibly across projects, maximizing resource utilization and knowledge retention.", type: "Employee", subtype: "Both", contractType: "Permanent Contract" },
+      { id: 22, symbol: "MA", name: "Marketing, Comms and PR agencies", weight: 4, category: "Service (SoW)", cost: 4, usage: "Underused", description: "Agencies that provide a marketing, brand, or PR service", activities: "Marketing agencies build brand awareness and manage public perception, driving customer engagement and sales growth.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 23, symbol: "DA", name: "Digital Agencies", weight: 4, category: "Service (SoW)", cost: 3, usage: "Overused", description: "Agencies that build digital properties (mobile apps, web platforms etc)", activities: "Digital agencies create and maintain digital platforms, enabling businesses to reach customers through modern channels.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 24, symbol: "OFF", name: '"Offshore" general', weight: 4, category: "Service (SoW)", cost: 3, usage: "Neutral", description: "Any offshore delivery where the type of provision is unknown or general", activities: "Offshore providers deliver cost-effective services from lower-cost locations, reducing operational expenses.", type: "Non employee", subtype: "Both", contractType: "SoW + Contract" },
+      { id: 25, symbol: "SI", name: "Systems Integrators", weight: 4, category: "Service (SoW)", cost: 3, usage: "Underused", description: "Large firms that connect systems in large enterprises", activities: "Systems integrators connect disparate technology systems, creating unified platforms that improve efficiency and data flow.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 26, symbol: "HRD", name: "HR Learning & Development", weight: 4, category: "Service (SoW)", cost: 3, usage: "Neutral", description: "Service to help with HR and learning", activities: "HR learning providers develop employee skills and capabilities, addressing talent gaps and improving workforce performance.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 33, symbol: "FE", name: "Fixed Term employee", weight: 4, category: "Employee", cost: 2, usage: "Neutral", description: "Employee who is employed for a specific period of time before their employment ends", activities: "Fixed-term employees provide temporary expertise for projects or peak periods without long-term commitments.", type: "Employee", subtype: "Both", contractType: "Fixed Term Contract" },
+      { id: 4, symbol: "CON", name: "Contingent Labour providers", weight: 3, category: "Contingent", cost: 3, usage: "Underused", description: "Companies providing direct labour on a short term basis with generic resource that is available on the market", activities: "Contingent labour providers offer immediate staffing solutions to handle labor fluctuations without long-term hiring commitments.", type: "Non employee", subtype: "Talent", contractType: "Contractor Contract" },
+      { id: 5, symbol: "MSP", name: "Managed Service Provider", weight: 3, category: "Contingent", cost: 4, usage: "Underused", description: "Companies managing multiple firms who providing labour on a short term basis with generic resource that is available on the market", activities: "Managed service providers handle the administration of multiple outsourced services, addressing the challenge of vendor and contract management.", type: "Non employee", subtype: "Talent", contractType: "Contractor Contract" },
+      { id: 6, symbol: "RPO", name: "Resource Process Outsourcer", weight: 3, category: "Contingent", cost: 4, usage: "Underused", description: "Companies managing recruitment processes on behalf of organisations", activities: "RPO companies streamline high-volume recruitment, reducing hiring time and improving candidate quality for organizations.", type: "Non employee", subtype: "Talent", contractType: "SoW or Work Order" },
+      { id: 7, symbol: "BPO", name: "Business Process Outsourcer", weight: 3, category: "Contingent", cost: 4, usage: "Underused", description: "Firms that specialize in executing business operations tasks on behalf of another company", activities: "BPO firms handle routine administrative tasks, allowing companies to focus on core business operations while reducing costs.", type: "Non employee", subtype: "Service", contractType: "SoW" },
+      { id: 13, symbol: "RF", name: "Recruitment or Interim firms", weight: 3, category: "Contingent", cost: 4, usage: "Underused", description: "Recruitment companies who provide senior level human capital and often then manage them too", activities: "Recruitment firms source and place senior talent quickly, addressing urgent leadership or specialized staffing needs.", type: "Non employee", subtype: "Talent", contractType: "Request form" },
+      { id: 32, symbol: "SEC", name: "Secondment", weight: 3, category: "Employee", cost: 2, usage: "Neutral", description: "Employees who are borrowed or shared from other parts of the business or other businesses", activities: "Secondments transfer knowledge and skills between teams or organizations, fostering collaboration and development.", type: "Employee", subtype: "Both", contractType: "Request form" },
+      { id: 9, symbol: "DC", name: "Direct Contract Service Providers", weight: 2, category: "Contingent", cost: 3, usage: "Overused", description: "Small firms - often single person firms. Umbrella companies are a proxy for this", activities: "Direct contract providers supply specialized skills on-demand for projects without the overhead of larger consulting firms.", type: "Non employee", subtype: "Service", contractType: "Contractor Contract" },
+      { id: 10, symbol: "EM", name: "Expert Marketplaces", weight: 2, category: "Contingent", cost: 1, usage: "Underused", description: "Platforms that connect SMEs and companies on a transactional (often call) basis", activities: "Expert marketplaces provide quick access to specialized knowledge for one-off consultations, solving immediate business questions.", type: "Non employee", subtype: "Service", contractType: "Automated contract" },
+      { id: 11, symbol: "CM", name: "Consulting Marketplaces", weight: 2, category: "Contingent", cost: 4, usage: "Underused", description: "Platforms that connect freelance consultants and companies", activities: "Consulting marketplaces match freelance consultants with projects, providing flexible access to expertise without long-term commitments.", type: "Non employee", subtype: "Service", contractType: "Automated contract" },
+      { id: 20, symbol: "FM", name: "Freelancers / Freelance Marketplaces", weight: 2, category: "Contingent", cost: 1, usage: "Underused", description: "Individual freelancers, or freelance marketplaces where lower skilled resource can be found", activities: "Freelancers provide flexible, task-based work for various projects, offering cost-effective solutions for non-critical tasks.", type: "Non employee", subtype: "Service", contractType: "Automated contract" },
+      { id: 30, symbol: "FT", name: "Full time Permanent Staff", weight: 2, category: "Employee", cost: 1, usage: "Neutral", description: "People who are employed on a full time basis with no end date", activities: "Full-time staff provide consistent, dedicated support for core business functions and long-term initiatives.", type: "Employee", subtype: "Both", contractType: "Permanent Contract" },
+      { id: 31, symbol: "PT", name: "Part time Permanent Staff", weight: 2, category: "Employee", cost: 1, usage: "Neutral", description: "People who are employed on a part time basis with no end date", activities: "Part-time staff offer flexible workforce solutions for roles that don’t require full-time coverage.", type: "Employee", subtype: "Both", contractType: "Permanent Contract" },
+      { id: 34, symbol: "GR", name: "Graduate", weight: 2, category: "Employee", cost: 2, usage: "Neutral", description: "University educated staff who have recently graduated", activities: "Graduates bring fresh perspectives and current academic knowledge, building the future talent pipeline.", type: "Employee", subtype: "Both", contractType: "Permanent Contract" },
+      { id: 35, symbol: "IN", name: "Intern", weight: 2, category: "Employee", cost: 1, usage: "Neutral", description: "Work experience placements for those still in education", activities: "Interns gain practical experience while providing support for basic tasks and bringing new ideas.", type: "Employee", subtype: "Both", contractType: "Fixed Term Contract" },
+      { id: 28, symbol: "LLM", name: "LLM", weight: 1, category: "AI and Data", cost: 1, usage: "Underused", description: "Use of Large Language models", activities: "LLMs automate content generation and analysis tasks, improving productivity and enabling new AI-powered capabilities.", type: "AI", subtype: "Service", contractType: "Automated contract" },
+      { id: 29, symbol: "AI", name: "AI Agent", weight: 1, category: "AI and Data", cost: 1, usage: "Underused", description: "Use of AI Agents", activities: "AI agents automate complex workflows and decision-making processes, reducing manual effort and improving consistency.", type: "AI", subtype: "Service", contractType: "Automated contract" }
+    ];
+    const managementPlatforms = [
+      { id: 101, symbol: "CMS", name: "Contract Management Platforms", description: "Manage full contract lifecycle: authoring, negotiation, approvals, execution, renewals, compliance. Centralize contract repository and automate workflows.", examples: "Icertis, Ironclad, ContractWorks, Dock365" },
+      { id: 102, symbol: "VMS", name: "Vendor Management Platforms", description: "Oversee vendor and contingent workforce lifecycle—sourcing, onboarding, compliance, performance tracking, invoicing.", examples: "SAP Fieldglass, Beeline, Upwork Enterprise, Rippling" },
+      { id: 103, symbol: "WORK", name: "Workforce Management Platforms", description: "Handle employee scheduling, time & attendance, labor forecasting, shift management, compliance.", examples: "UKG (Kronos), ADP, Oracle HCM Cloud, Workday, When I Work, Homebase" },
+      { id: 104, symbol: "PLAN", name: "Workforce Planning Systems", description: "Strategic workforce planning: skills gap analysis, scenario modeling, headcount forecasting, succession planning.", examples: "Visier, Workday Strategic Workforce Planning, OrgVue, Planful" },
+      { id: 105, symbol: "PROJ", name: "Project Management Platforms", description: "Plan, execute, and monitor projects. Features include task management, resource allocation, Gantt charts, collaboration tools.", examples: "Asana, Monday.com, Smartsheet, Microsoft Project, Jira" },
+      { id: 106, symbol: "ERP", name: "Enterprise Resource Planning", description: "Integrated business management software: finance, HR, supply chain, manufacturing, CRM in unified system.", examples: "SAP, Oracle NetSuite, Microsoft Dynamics 365, Infor" },
+      { id: 107, symbol: "S2P", name: "Source-to-Pay Platforms", description: "End-to-end procurement: sourcing, contracts, purchasing, invoicing, payments. Streamline buying process and supplier management.", examples: "Coupa, Jaggaer, GEP, Zycus, Tradeshift" },
+      { id: 108, symbol: "AUTO", name: "Autonomous Sourcing Platforms", description: "AI-powered procurement: automated supplier discovery, RFx creation, bid analysis, negotiation assistance.", examples: "Globality, Keelvar, Pactum, EdgeworthBox" },
+      { id: 109, symbol: "SIG", name: "Signature Management Systems", description: "Electronic signature collection, document routing, authentication, audit trails, compliance management.", examples: "DocuSign, Adobe Sign, HelloSign, PandaDoc" },
+      { id: 110, symbol: "PO", name: "Procurement Orchestration Platforms", description: "Coordinate procurement activities across systems, automate workflows, provide unified procurement intelligence.", examples: "Zip, Tonkean, Pipefy, Intake.ai" }
+    ];
+    const companyLogos = {
+        "Managed Service Provider": [
+            { name: "Randstad", logo: "https://seeklogo.com/images/R/randstad-logo-2B05ED0F8F-seeklogo.com.png", link: "https://www.randstad.com" },
+            { name: "Allegis Group", logo: "https://seeklogo.com/images/A/allegis-group-logo-C3AA2F982C-seeklogo.com.png", link: "https://www.allegisgroup.com" },
+            { name: "Hays", logo: "https://seeklogo.com/images/H/hays-logo-B3E7FA82B5-seeklogo.com.png", link: "https://www.hays.com" },
+            { name: "Headfirst Group", logo: "https://www.headfirstgroup.co.uk/wp-content/uploads/2021/03/Headfirst-Logo.png", link: "https://www.headfirstgroup.co.uk" },
+            { name: "TAPFIN (ManpowerGroup)", logo: "https://seeklogo.com/images/T/tapfin-logo-0F8B5E7C61-seeklogo.com.png", link: "https://www.tapfin.com" },
+            { name: "Adecco", logo: "https://seeklogo.com/images/A/adecco-logo-4F4F3A1F35-seeklogo.com.png", link: "https://www.adecco.com" }
+        ],
+        "Business Process Outsourcer": [
+            { name: "Genpact", logo: "https://seeklogo.com/images/G/genpact-logo-17A0D6A57B-seeklogo.com.png", link: "https://www.genpact.com" },
+            { name: "Accenture", logo: "https://seeklogo.com/images/A/accenture-logo-31952AE003-seeklogo.com.png", link: "https://www.accenture.com" },
+            { name: "Wipro", logo: "https://seeklogo.com/images/W/wipro-logo-D020A045EC-seeklogo.com.png", link: "https://www.wipro.com" },
+            { name: "Cognizant", logo: "https://seeklogo.com/images/C/cognizant-logo-8B2D690665-seeklogo.com.png", link: "https://www.cognizant.com" },
+            { name: "Capgemini", logo: "https://seeklogo.com/images/C/capgemini-logo-78A1B6AC78-seeklogo.com.png", link: "https://www.capgemini.com" }
+        ],
+        "Advisory Firms": [
+            { name: "McKinsey & Company", logo: "https://seeklogo.com/images/M/mckinsey-company-logo-42ADC47D2A-seeklogo.com.png", link: "https://www.mckinsey.com" },
+            { name: "Boston Consulting Group", logo: "https://seeklogo.com/images/B/boston-consulting-group-bcg-logo-9AA38218BD-seeklogo.com.png", link: "https://www.bcg.com" },
+            { name: "Bain & Company", logo: "https://seeklogo.com/images/B/bain-company-logo-5E4B99B502-seeklogo.com.png", link: "https://www.bain.com" },
+            { name: "Oliver Wyman", logo: "https://seeklogo.com/images/O/oliver-wyman-logo-38D66CE0B6-seeklogo.com.png", link: "https://www.oliverwyman.com" },
+            { name: "Roland Berger", logo: "https://seeklogo.com/images/R/roland-berger-logo-5F0B6AB0AB-seeklogo.com.png", link: "https://www.rolandberger.com" }
+        ],
+        "Management Consulting Firms": [
+            { name: "Deloitte", logo: "https://seeklogo.com/images/D/deloitte-logo-3E1C582B01-seeklogo.com.png", link: "https://www2.deloitte.com" },
+            { name: "PwC", logo: "https://seeklogo.com/images/P/pwc-logo-09DA96C337-seeklogo.com.png", link: "https://www.pwc.com" },
+            { name: "EY", logo: "https://seeklogo.com/images/E/ey-logo-815F886C50-seeklogo.com.png", link: "https://www.ey.com" },
+            { name: "KPMG", logo: "https://seeklogo.com/images/K/kpmg-logo-9F91C02F40-seeklogo.com.png", link: "https://home.kpmg" },
+            { name: "Booz Allen Hamilton", logo: "https://seeklogo.com/images/B/booz-allen-hamilton-logo-9A8928F5BA-seeklogo.com.png", link: "https://www.boozallen.com" }
+        ],
+        "Professional Services Firms": [
+            { name: "Grant Thornton", logo: "https://seeklogo.com/images/G/grant-thornton-logo-46E6FC79B5-seeklogo.com.png", link: "https://www.grantthornton.global" },
+            { name: "BDO", logo: "https://seeklogo.com/images/B/bdo-logo-F6C1F2D0D6-seeklogo.com.png", link: "https://www.bdo.com" },
+            { name: "RSM", logo: "https://seeklogo.com/images/R/rsm-logo-1D7D9C26E0-seeklogo.com.png", link: "https://www.rsm.global" },
+            { name: "Mazars", logo: "https://seeklogo.com/images/M/mazars-logo-F0D2E7C96D-seeklogo.com.png", link: "https://www.mazars.com" },
+            { name: "Crowe", logo: "https://seeklogo.com/images/C/crowe-logo-F8DE8D8F90-seeklogo.com.png", link: "https://www.crowe.com" }
+        ],
+        "IT Outsource": [
+            { name: "Infosys", logo: "https://seeklogo.com/images/I/infosys-logo-21A44188C4-seeklogo.com.png", link: "https://www.infosys.com" },
+            { name: "TCS", logo: "https://seeklogo.com/images/T/tcs-tata-consultancy-services-logo-B98F7A4E2B-seeklogo.com.png", link: "https://www.tcs.com" },
+            { name: "HCL Technologies", logo: "https://seeklogo.com/images/H/hcl-technologies-logo-FC91A8C074-seeklogo.com.png", link: "https://www.hcltech.com" },
+            { name: "Tech Mahindra", logo: "https://seeklogo.com/images/T/tech-mahindra-logo-B98F99E993-seeklogo.com.png", link: "https://www.techmahindra.com" },
+            { name: "IBM", logo: "https://seeklogo.com/images/I/ibm-logo-56CA5EF849-seeklogo.com.png", link: "https://www.ibm.com" }
+        ],
+        "Contingent Labour providers": [
+            { name: "Kelly Services", logo: "https://seeklogo.com/images/K/kelly-services-logo-F4B5BC50D8-seeklogo.com.png", link: "https://www.kellyservices.com" },
+            { name: "Robert Half", logo: "https://seeklogo.com/images/R/robert-half-logo-0FD6B21EC5-seeklogo.com.png", link: "https://www.roberthalf.com" },
+            { name: "Modis", logo: "https://seeklogo.com/images/M/modis-logo-3D96B4BEDC-seeklogo.com.png", link: "https://www.modis.com" },
+            { name: "Kforce", logo: "https://seeklogo.com/images/K/kforce-logo-0EFA8F8A8F-seeklogo.com.png", link: "https://www.kforce.com" },
+            { name: "Experis", logo: "https://seeklogo.com/images/E/experis-logo-BA7E7B9E5F-seeklogo.com.png", link: "https://www.experis.com" }
+        ],
+        "Systems Integrators": [
+            { name: "IBM Global Services", logo: "https://seeklogo.com/images/I/ibm-logo-56CA5EF849-seeklogo.com.png", link: "https://www.ibm.com/services" },
+            { name: "Accenture", logo: "https://seeklogo.com/images/A/accenture-logo-31952AE003-seeklogo.com.png", link: "https://www.accenture.com" },
+            { name: "DXC Technology", logo: "https://seeklogo.com/images/D/dxc-technology-logo-F528E45693-seeklogo.com.png", link: "https://dxc.com" },
+            { name: "Atos", logo: "https://seeklogo.com/images/A/atos-logo-3DD2C32F0B-seeklogo.com.png", link: "https://atos.net" },
+            { name: "NTT Data", logo: "https://seeklogo.com/images/N/ntt-data-logo-B76B7A2ACB-seeklogo.com.png", link: "https://www.nttdata.com" }
+        ],
+        "IT Service Providers": [
+            { name: "Cisco", logo: "https://seeklogo.com/images/C/cisco-logo-FCC8B66C88-seeklogo.com.png", link: "https://www.cisco.com" },
+            { name: "AT&T Business", logo: "https://seeklogo.com/images/A/at-t-logo-ECBE982FD8-seeklogo.com.png", link: "https://www.business.att.com" },
+            { name: "Verizon Business", logo: "https://seeklogo.com/images/V/verizon-logo-151C8C3C6F-seeklogo.com.png", link: "https://www.verizon.com/business" },
+            { name: "Orange Business Services", logo: "https://seeklogo.com/images/O/orange-logo-7D5798C06F-seeklogo.com.png", link: "https://www.orange-business.com" },
+            { name: "BT Global", logo: "https://seeklogo.com/images/B/bt-logo-C79522FD66-seeklogo.com.png", link: "https://www.globalservices.bt.com" }
+        ],
+        "Specialist Technology Providers": [
+            { name: "Thoughtworks", logo: "https://seeklogo.com/images/T/thoughtworks-logo-63278A4D31-seeklogo.com.png", link: "https://www.thoughtworks.com" },
+            { name: "EPAM Systems", logo: "https://seeklogo.com/images/E/epam-logo-65EA0C1BCE-seeklogo.com.png", link: "https://www.epam.com" },
+            { name: "Globant", logo: "https://seeklogo.com/images/G/globant-logo-2A4B7A0FA2-seeklogo.com.png", link: "https://www.globant.com" },
+            { name: "Endava", logo: "https://seeklogo.com/images/E/endava-logo-FE8AFFCAA1-seeklogo.com.png", link: "https://www.endava.com" },
+            { name: "Publicis Sapient", logo: "https://seeklogo.com/images/P/publicis-sapient-logo-6BD6BB9E26-seeklogo.com.png", link: "https://www.publicissapient.com" }
+        ],
+        "Boutique Technology Firms": [
+            { name: "10up", logo: "https://10up.com/assets/img/10up-logo-full.svg", link: "https://10up.com" },
+            { name: "Pivotal Labs", logo: "https://seeklogo.com/images/P/pivotal-logo-9FC6215DD0-seeklogo.com.png", link: "https://tanzu.vmware.com/labs" },
+            { name: "Reaktor", logo: "https://www.reaktor.com/wp-content/themes/reaktor-2021/assets/img/reaktor-logo.svg", link: "https://www.reaktor.com" },
+            { name: "Futurice", logo: "https://futurice.com/assets/logo-6dc7faa7.svg", link: "https://futurice.com" },
+            { name: "Test Double", logo: "https://testdouble.com/img/logo.svg", link: "https://testdouble.com" }
+        ],
+        "Risk Consulting Firms": [
+            { name: "Kroll", logo: "https://seeklogo.com/images/K/kroll-logo-88D82D1FD4-seeklogo.com.png", link: "https://www.kroll.com" },
+            { name: "Control Risks", logo: "https://www.controlrisks.com/-/media/corporate/images/logo/control-risks-logo.svg", link: "https://www.controlrisks.com" },
+            { name: "FTI Consulting", logo: "https://seeklogo.com/images/F/fti-consulting-logo-8E96A8D32B-seeklogo.com.png", link: "https://www.fticonsulting.com" },
+            { name: "Aon Risk Solutions", logo: "https://seeklogo.com/images/A/aon-logo-72F42F33B9-seeklogo.com.png", link: "https://www.aon.com" },
+            { name: "Marsh Risk Consulting", logo: "https://seeklogo.com/images/M/marsh-logo-82CCABCE72-seeklogo.com.png", link: "https://www.marsh.com" }
+        ],
+        "Cyber Consulting Firms": [
+            { name: "CrowdStrike", logo: "https://seeklogo.com/images/C/crowdstrike-logo-1CD0895605-seeklogo.com.png", link: "https://www.crowdstrike.com" },
+            { name: "Mandiant (Google)", logo: "https://seeklogo.com/images/M/mandiant-logo-02BA16C893-seeklogo.com.png", link: "https://www.mandiant.com" },
+            { name: "Recorded Future", logo: "https://www.recordedfuture.com/hubfs/recorded-future-logo.svg", link: "https://www.recordedfuture.com" },
+            { name: "Rapid7", logo: "https://seeklogo.com/images/R/rapid7-logo-2E7D3F0FFB-seeklogo.com.png", link: "https://www.rapid7.com" },
+            { name: "Secureworks", logo: "https://seeklogo.com/images/S/secureworks-logo-75D34A4FC9-seeklogo.com.png", link: "https://www.secureworks.com" }
+        ],
+        "Legal Service Providers": [
+            { name: "Axiom", logo: "https://www.axiomlaw.com/hubfs/axiom-logo.svg", link: "https://www.axiomlaw.com" },
+            { name: "UnitedLex", logo: "https://www.unitedlex.com/wp-content/uploads/2021/01/unitedlex-logo.svg", link: "https://www.unitedlex.com" },
+            { name: "Elevate", logo: "https://elevateservices.com/wp-content/themes/elevate2020/dist/images/elevate-logo.svg", link: "https://elevateservices.com" },
+            { name: "Pangea3", logo: "https://www.pangea3.com/wp-content/uploads/2021/05/pangea3-logo.png", link: "https://www.pangea3.com" },
+            { name: "Integreon", logo: "https://www.integreon.com/wp-content/uploads/2021/01/integreon-logo.svg", link: "https://www.integreon.com" }
+        ],
+        "Regulatory Management Firms": [
+            { name: "Compliance Solutions Strategies", logo: "https://www.cssregtech.com/wp-content/uploads/2021/06/css-logo.png", link: "https://www.cssregtech.com" },
+            { name: "Thomson Reuters Regulatory", logo: "https://seeklogo.com/images/T/thomson-reuters-logo-4AF8C00F8C-seeklogo.com.png", link: "https://www.thomsonreuters.com/en/products-services/regulatory.html" },
+            { name: "Duff & Phelps", logo: "https://seeklogo.com/images/D/duff-phelps-logo-9D9B6C6397-seeklogo.com.png", link: "https://www.kroll.com" },
+            { name: "ACA Group", logo: "https://www.acaglobal.com/wp-content/uploads/2021/03/aca-logo.svg", link: "https://www.acaglobal.com" },
+            { name: "Promontory Financial Group", logo: "https://www.promontory.com/wp-content/uploads/2021/01/promontory-logo.png", link: "https://www.promontory.com" }
+        ],
+        "Marketing, Comms and PR agencies": [
+            { name: "Ogilvy", logo: "https://seeklogo.com/images/O/ogilvy-logo-F7064FA7E6-seeklogo.com.png", link: "https://www.ogilvy.com" },
+            { name: "Weber Shandwick", logo: "https://seeklogo.com/images/W/weber-shandwick-logo-9C3FF96FD2-seeklogo.com.png", link: "https://www.webershandwick.com" },
+            { name: "Edelman", logo: "https://seeklogo.com/images/E/edelman-logo-5B5A4BFF87-seeklogo.com.png", link: "https://www.edelman.com" },
+            { name: "FleishmanHillard", logo: "https://seeklogo.com/images/F/fleishmanhillard-logo-F8C0E9F93F-seeklogo.com.png", link: "https://fleishmanhillard.com" },
+            { name: "Burson Cohn & Wolfe", logo: "https://seeklogo.com/images/B/bcw-burson-cohn-wolfe-logo-4D5AD7F8B1-seeklogo.com.png", link: "https://bcw-global.com" }
+        ],
+        "Digital Agencies": [
+            { name: "AKQA", logo: "https://seeklogo.com/images/A/akqa-logo-F9F5EBFD02-seeklogo.com.png", link: "https://www.akqa.com" },
+            { name: "R/GA", logo: "https://seeklogo.com/images/R/r-ga-logo-38D6A38CFD-seeklogo.com.png", link: "https://www.rga.com" },
+            { name: "HUGE", logo: "https://seeklogo.com/images/H/huge-logo-4BFB5D3D8F-seeklogo.com.png", link: "https://www.hugeinc.com" },
+            { name: "Razorfish", logo: "https://seeklogo.com/images/R/razorfish-logo-9E0D7F5F5D-seeklogo.com.png", link: "https://www.razorfish.com" },
+            { name: "Wunderman Thompson", logo: "https://seeklogo.com/images/W/wunderman-thompson-logo-B35F993EA5-seeklogo.com.png", link: "https://www.wundermanthompson.com" }
+        ],
+        '"Offshore" general': [
+            { name: "Infosys", logo: "https://seeklogo.com/images/I/infosys-logo-21A44188C4-seeklogo.com.png", link: "https://www.infosys.com" },
+            { name: "Wipro", logo: "https://seeklogo.com/images/W/wipro-logo-D020A045EC-seeklogo.com.png", link: "https://www.wipro.com" },
+            { name: "HCL Technologies", logo: "https://seeklogo.com/images/H/hcl-technologies-logo-FC91A8C074-seeklogo.com.png", link: "https://www.hcltech.com" },
+            { name: "Luxoft", logo: "https://seeklogo.com/images/L/luxoft-logo-EFC5F0DB61-seeklogo.com.png", link: "https://www.luxoft.com" },
+            { name: "Virtusa", logo: "https://seeklogo.com/images/V/virtusa-logo-74D3A1B7F3-seeklogo.com.png", link: "https://www.virtusa.com" }
+        ],
+        "Resource Process Outsourcer": [
+            { name: "ISS World Services", logo: "https://seeklogo.com/images/I/iss-logo-9D3E8A9F93-seeklogo.com.png", link: "https://www.issworld.com" },
+            { name: "Sodexo", logo: "https://seeklogo.com/images/S/sodexo-logo-7F3FD5CC2B-seeklogo.com.png", link: "https://www.sodexo.com" },
+            { name: "Aramark", logo: "https://seeklogo.com/images/A/aramark-logo-5E6F8B3E95-seeklogo.com.png", link: "https://www.aramark.com" },
+            { name: "Capita", logo: "https://seeklogo.com/images/C/capita-logo-2B3E8B3E95-seeklogo.com.png", link: "https://www.capita.com" },
+            { name: "G4S", logo: "https://seeklogo.com/images/G/g4s-logo-9F3E8A9F93-seeklogo.com.png", link: "https://www.g4s.com" }
+        ],
+        "Direct Contract Service Providers": [
+            { name: "Toptal", logo: "https://seeklogo.com/images/T/toptal-logo-9BB6D5FBB8-seeklogo.com.png", link: "https://www.toptal.com" },
+            { name: "Gun.io", logo: "https://gun.io/static/images/gun-logo.svg", link: "https://gun.io" },
+            { name: "Codementor", logo: "https://cdn.codementor.io/assets/logo-e6e5ad36.svg", link: "https://www.codementor.io" },
+            { name: "X-Team", logo: "https://x-team.com/static/images/x-team-logo.svg", link: "https://x-team.com" },
+            { name: "Gigster", logo: "https://gigster.com/img/gigster-logo.svg", link: "https://gigster.com" }
+        ],
+        "Expert Marketplaces": [
+            { name: "GLG (Gerson Lehrman Group)", logo: "https://glginsights.com/wp-content/uploads/2021/03/glg-logo.svg", link: "https://glginsights.com" },
+            { name: "AlphaSights", logo: "https://seeklogo.com/images/A/alphasights-logo-8F5C3D2B85-seeklogo.com.png", link: "https://www.alphasights.com" },
+            { name: "Guidepoint", logo: "https://www.guidepoint.com/wp-content/uploads/2021/04/guidepoint-logo.svg", link: "https://www.guidepoint.com" },
+            { name: "Third Bridge", logo: "https://thirdbridge.com/wp-content/uploads/2021/03/third-bridge-logo.svg", link: "https://thirdbridge.com" },
+            { name: "Tegus", logo: "https://www.tegus.com/wp-content/uploads/2021/03/tegus-logo.svg", link: "https://www.tegus.com" }
+        ],
+        "Consulting Marketplaces": [
+            { name: "Catalant", logo: "https://www.catalant.com/wp-content/uploads/2021/03/catalant-logo.svg", link: "https://www.catalant.com" },
+            { name: "Business Talent Group (BTG)", logo: "https://businesstalentgroup.com/wp-content/uploads/2021/03/btg-logo.svg", link: "https://businesstalentgroup.com" },
+            { name: "Expert360", logo: "https://expert360.com/images/expert360-logo.svg", link: "https://expert360.com" },
+            { name: "Comatch", logo: "https://www.comatch.com/wp-content/uploads/2021/03/comatch-logo.svg", link: "https://www.comatch.com" },
+            { name: "Talmix", logo: "https://www.talmix.com/wp-content/uploads/2021/03/talmix-logo.svg", link: "https://www.talmix.com" }
+        ],
+        "Recruitment or Interim firms": [
+            { name: "Michael Page", logo: "https://seeklogo.com/images/M/michael-page-logo-4B5C3D2B85-seeklogo.com.png", link: "https://www.michaelpage.com" },
+            { name: "Russell Reynolds", logo: "https://seeklogo.com/images/R/russell-reynolds-logo-7F5C3D2B85-seeklogo.com.png", link: "https://www.russellreynolds.com" },
+            { name: "Spencer Stuart", logo: "https://seeklogo.com/images/S/spencer-stuart-logo-9B5C3D2B85-seeklogo.com.png", link: "https://www.spencerstuart.com" },
+            { name: "Egon Zehnder", logo: "https://seeklogo.com/images/E/egon-zehnder-logo-3D5C3D2B85-seeklogo.com.png", link: "https://www.egonzehnder.com" },
+            { name: "Korn Ferry", logo: "https://seeklogo.com/images/K/korn-ferry-logo-0E5C3D2B85-seeklogo.com.png", link: "https://www.kornferry.com" }
+        ],
+        "Freelancers / Freelance Marketplaces": [
+            { name: "Upwork", logo: "https://seeklogo.com/images/U/upwork-logo-6F3D5F2ADF-seeklogo.com.png", link: "https://www.upwork.com" },
+            { name: "Fiverr", logo: "https://seeklogo.com/images/F/fiverr-logo-561359B8C1-seeklogo.com.png", link: "https://www.fiverr.com" },
+            { name: "Freelancer.com", logo: "https://seeklogo.com/images/F/freelancer-com-logo-2B7C76C3D7-seeklogo.com.png", link: "https://www.freelancer.com" },
+            { name: "99designs", logo: "https://seeklogo.com/images/1/99designs-logo-F87B9E4B95-seeklogo.com.png", link: "https://99designs.com" },
+            { name: "Guru", logo: "https://seeklogo.com/images/G/guru-logo-5D3E8B3E95-seeklogo.com.png", link: "https://www.guru.com" }
+        ]
+    };
+    const categoryStyles = {
+      "Service (SoW)": { bg: "#E6F3FF", borderColor: "#B3D9FF", textColor: "#0066CC" },
+      "Contingent": { bg: "#FFE6E6", borderColor: "#FFB3B3", textColor: "#CC0000" },
+      "Employee": { bg: "#E6FFE6", borderColor: "#B3FFB3", textColor: "#008800" },
+      "AI and Data": { bg: "#FFFFE6", borderColor: "#FFFFB3", textColor: "#CC9900" }
+    };
+    const managementPlatformStyle = { bg: "#F0E6FF", borderColor: "#D4B3FF", textColor: "#6600CC" };
+    
+    const elementPositions = {
+        1: { row: 1, col: 1 }, 2: { row: 1, col: 14 },
+        3: { row: 2, col: 1 }, 4: { row: 2, col: 2 }, 5: { row: 2, col: 9 }, 6: { row: 2, col: 10 }, 7: { row: 2, col: 11 }, 8: { row: 2, col: 12 }, 9: { row: 2, col: 13 }, 10: { row: 2, col: 14 },
+        11: { row: 3, col: 1 }, 12: { row: 3, col: 2 }, 13: { row: 3, col: 9 }, 14: { row: 3, col: 10 }, 15: { row: 3, col: 11 }, 16: { row: 3, col: 12 }, 17: { row: 3, col: 13 }, 18: { row: 3, col: 14 },
+        19: { row: 4, col: 1 }, 20: { row: 4, col: 2 }, 21: { row: 4, col: 3 }, 22: { row: 4, col: 4 }, 23: { row: 4, col: 5 }, 24: { row: 4, col: 6 }, 25: { row: 4, col: 7 }, 26: { row: 4, col: 8 }, 27: { row: 4, col: 9 }, 28: { row: 4, col: 10 }, 29: { row: 4, col: 11 }, 30: { row: 4, col: 12 }, 31: { row: 4, col: 13 }, 32: { row: 4, col: 14 },
+        33: { row: 5, col: 1 }, 34: { row: 5, col: 2 }, 35: { row: 5, col: 3 }
+    };
+
+    let activeCategory = null;
+    let searchTerm = '';
+    const root = document.getElementById('triage-table-root');
+
+    function render() {
+      root.innerHTML = '';
+      const header = document.createElement('h1');
+      header.textContent = 'Triage Pathways Periodic Table';
+      root.appendChild(header);
+      renderControls();
+      
+      const scrollWrapper = document.createElement('div');
+      // On mobile, this wrapper isn't needed for scrolling
+      if (!isMobile) {
+        scrollWrapper.className = 'triage-grid-wrapper';
+      }
+      root.appendChild(scrollWrapper);
+
+      renderMainTable(scrollWrapper);
+      renderPlatforms(scrollWrapper);
+    }
+    
+    function renderControls() {
+        const controlsContainer = document.createElement('div');
+        controlsContainer.className = 'triage-controls';
+        const searchWrapper = document.createElement('div');
+        const searchLabel = document.createElement('label');
+        searchLabel.htmlFor = 'search-input';
+        searchLabel.textContent = 'Search by Name or Symbol';
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.id = 'search-input';
+        searchInput.placeholder = 'e.g., "Advisory" or "AD"';
+        searchInput.value = searchTerm;
+        searchInput.addEventListener('input', (e) => {
+            searchTerm = e.target.value;
+            render();
+        });
+        searchWrapper.appendChild(searchLabel);
+        searchWrapper.appendChild(searchInput);
+        const filterGroup = document.createElement('div');
+        const filterLabel = document.createElement('label');
+        filterLabel.textContent = 'Filter by Category';
+        const filterButtons = document.createElement('div');
+        filterButtons.className = 'filter-buttons';
+        const allBtn = document.createElement('button');
+        allBtn.textContent = 'All';
+        allBtn.className = activeCategory === null ? 'active' : '';
+        allBtn.addEventListener('click', () => {
+            activeCategory = null;
+            render();
+        });
+        filterButtons.appendChild(allBtn);
+        Object.keys(categoryStyles).forEach(cat => {
+            const btn = document.createElement('button');
+            btn.textContent = cat;
+            btn.className = activeCategory === cat ? 'active' : '';
+            btn.addEventListener('click', () => {
+                activeCategory = cat;
+                render();
+            });
+            filterButtons.appendChild(btn);
+        });
+        filterGroup.appendChild(filterLabel);
+        filterGroup.appendChild(filterButtons);
+        controlsContainer.appendChild(searchWrapper);
+        controlsContainer.appendChild(filterGroup);
+        root.appendChild(controlsContainer);
+    }
+    
+    function renderMainTable(wrapper) {
+      const gridContainer = document.createElement('div');
+      gridContainer.className = 'triage-grid main-grid';
+      wrapper.appendChild(gridContainer);
+      
+      const lcSearch = searchTerm.toLowerCase();
+
+      // For mobile view, sort by ID to have a consistent list
+      const elementsToRender = isMobile ? [...channels].sort((a,b) => a.id - b.id) : channels;
+
+      elementsToRender.forEach(channel => {
+        const style = categoryStyles[channel.category];
+        const card = document.createElement('button');
+        card.className = 'element-card';
+        card.style.backgroundColor = style.bg;
+        card.style.borderColor = style.borderColor;
+        card.style.color = style.textColor;
+
+        // Only apply grid positions on desktop
+        if (!isMobile) {
+            const position = elementPositions[channel.id];
+            if (position) {
+              card.style.gridColumnStart = position.col;
+              card.style.gridRowStart = position.row;
+            }
+        }
+        
+        const isCategoryMatch = !activeCategory || channel.category === activeCategory;
+        const isSearchMatch = !searchTerm || channel.name.toLowerCase().includes(lcSearch) || channel.symbol.toLowerCase().includes(lcSearch);
+        if (!isCategoryMatch || !isSearchMatch) {
+            card.classList.add('filtered-out');
+        }
+        
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="id">${channel.id}</div>
+            <div class="weight">${channel.weight}</div>
+          </div>
+          <div class="symbol">${channel.symbol}</div>
+          <div class="name">${channel.name}</div>
+        `;
+        card.addEventListener('click', () => showModal(channel));
+        gridContainer.appendChild(card);
+      });
+    }
+
+    function renderPlatforms(wrapper) {
+        const title = document.createElement('h2');
+        title.textContent = 'Management Platforms';
+        wrapper.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'triage-grid platforms-grid';
+        wrapper.appendChild(grid);
+
+        managementPlatforms.forEach((platform, index) => {
+            const card = document.createElement('button');
+            card.className = 'element-card';
+            card.style.backgroundColor = managementPlatformStyle.bg;
+            card.style.borderColor = managementPlatformStyle.borderColor;
+            card.style.color = managementPlatformStyle.textColor;
+            
+            // Only apply grid positions on desktop
+            if (!isMobile) {
+                card.style.gridColumnStart = index + 1;
+            }
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="id">${platform.id - 100}</div>
+                </div>
+                <div class="symbol">${platform.symbol}</div>
+                <div class="name">${platform.name}</div>
+            `;
+            card.addEventListener('click', () => showModal(platform, true));
+            grid.appendChild(card);
+        });
+    }
+
+    function showModal(item, isPlatform = false) {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      const modal = document.createElement('div');
+      modal.className = 'modal-content';
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'modal-close-btn';
+      closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+      const style = isPlatform ? managementPlatformStyle : categoryStyles[item.category];
+      
+      modal.innerHTML = `
+        <div class="modal-header">
+          <div class="card-preview" style="background-color:${style.bg}; border-color:${style.borderColor}; color:${style.textColor};">
+            <div class="id">#${isPlatform ? item.id - 100 : item.id}</div>
+            <div class="symbol">${item.symbol}</div>
+            ${!isPlatform ? `<div class="weight">Weight: ${item.weight}</div>` : ''}
+          </div>
+          <div class="details">
+            <h2>${item.name}</h2>
+            <div class="category-badge" style="background-color:${style.bg}; border-color:${style.borderColor}; color:${style.textColor};">
+              ${isPlatform ? 'Management Platform' : item.category}
+            </div>
+          </div>
+        </div>
+        <div class="modal-body">
+            ${item.description ? `<h3>Description</h3><p>${item.description}</p>` : ''}
+            ${item.activities ? `<h3>Activities & Value</h3><p>${item.activities}</p>` : ''}
+        </div>
+      `;
+      
+      const modalBody = modal.querySelector('.modal-body');
+
+      if (isPlatform) {
+          if (item.examples) {
+              const examplesSection = document.createElement('div');
+              examplesSection.innerHTML = `<h3>Example Platforms</h3><p>${item.examples}</p>`;
+              modalBody.appendChild(examplesSection);
+          }
+      } else {
+          const logos = companyLogos[item.name];
+          if (logos && logos.length > 0) {
+              const logoSection = document.createElement('div');
+              logoSection.className = 'logo-section';
+              let logoHTML = '<h3>Example Providers</h3><div class="modal-logo-container">';
+              logos.forEach(logo => {
+                  logoHTML += `
+                      <a href="${logo.link}" target="_blank" rel="noopener noreferrer" title="${logo.name}">
+                          <img src="${logo.logo}" alt="${logo.name} logo">
+                      </a>
+                  `;
+              });
+              logoHTML += '</div>';
+              logoSection.innerHTML = logoHTML;
+              modalBody.appendChild(logoSection);
+          }
+          
+          const infoGrid = document.createElement('div');
+          infoGrid.className = 'info-grid';
+          infoGrid.innerHTML = `
+            <div><span>Cost:</span> ${'💰'.repeat(item.cost)}</div>
+            <div><span>Level of Usage:</span> ${item.usage}</div>
+            <div><span>Type:</span> ${item.type}</div>
+            <div><span>Sub-type:</span> ${item.subtype}</div>
+            <div><span>Contract:</span> ${item.contractType}</div>
+            <div><span>Weight:</span> ${item.weight} (1=Light, 5=Heavy)</div>
+          `;
+          modalBody.appendChild(infoGrid);
+      }
+
+      modal.prepend(closeBtn);
+      backdrop.appendChild(modal);
+      document.body.appendChild(backdrop);
+      
+      const closeModal = () => document.body.removeChild(backdrop);
+      backdrop.addEventListener('click', closeModal);
+      closeBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', e => e.stopPropagation());
+    }
+
+    render();
+  })();
+</script>
