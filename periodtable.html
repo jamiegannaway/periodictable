@@ -1,1 +1,727 @@
+An interactive periodic table of enterprise software markets has been created based on the provided analysis. Below is the code that generates this visualization.
 
+### **How to Use the Code**
+
+1.  Copy the entire code block below.
+2.  Save it as an HTML file (e.g., `market_table.html`).
+3.  Open the file in any modern web browser.
+
+The page will display an interactive periodic table where each "element" represents a distinct enterprise software market.
+
+  * **Click on a Market Category:** A detailed pop-up (modal) will appear, showing the market's description, sizing, average growth rate (CAGR), and a list of key companies in that space.
+  * **Click on a Company Name within the Modal:** The modal will update to show specific details about that company, including its website, size, description, and key differentiator.
+
+-----
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Software Market Landscape</title>
+    <style>
+        /* Basic Setup & Fonts */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #F9FAFB;
+            margin: 0;
+            padding: 1.5rem;
+            color: #374151;
+        }
+
+        /* Header */
+        h1 {
+            font-size: 1.875rem;
+            font-weight: 300;
+            padding: 1rem;
+            background-color: white;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+            padding: 0 0.5rem;
+        }
+
+        /* Grid Wrapper & Grid Styles */
+        .market-grid-wrapper {
+            overflow-x: auto;
+            padding-bottom: 1rem;
+        }
+
+        .market-grid {
+            display: grid;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            min-width: 1000px;
+        }
+
+        /* Element Card Styling */
+        .element-card {
+            position: relative;
+            border: 2px solid transparent;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 110px;
+            box-sizing: border-box;
+            background-color: #fff;
+        }
+
+        .element-card:hover {
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+
+        .element-card .symbol {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .element-card .name {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+
+        /* Modal Styles */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .modal-backdrop.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            position: relative;
+            max-width: 56rem; /* Increased width */
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            padding: 2.5rem;
+            transform: scale(0.95);
+            transition: transform 0.3s;
+        }
+        
+        .modal-backdrop.visible .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 9999px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .modal-close-btn:hover { background-color: #F3F4F6; }
+
+        .modal-header h2 {
+            font-size: 1.875rem;
+            font-weight: 300;
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+        
+        .modal-body h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #E5E7EB;
+            padding-bottom: 0.25rem;
+        }
+        
+        .modal-body p, .modal-body ul {
+            margin: 0 0 1rem 0;
+            line-height: 1.6;
+            color: #4B5563;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+            background-color: #F9FAFB;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .info-grid div {
+            font-size: 0.9rem;
+        }
+
+        .info-grid span {
+            font-weight: 600;
+            display: block;
+            color: #111827;
+        }
+        
+        .company-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .company-list li {
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s;
+            cursor: pointer;
+            margin-bottom: 0.25rem;
+            border: 1px solid #E5E7EB;
+        }
+
+        .company-list li:hover {
+            background-color: #F0E6FF; /* Match platform color */
+        }
+        
+        .company-list-item-header {
+            font-weight: 600;
+        }
+
+        .modal-body a {
+            color: #3B82F6;
+            text-decoration: none;
+        }
+        
+        .modal-body a:hover {
+            text-decoration: underline;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            color: #3B82F6;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            margin-bottom: 1rem;
+        }
+
+        /* --- MOBILE STYLES --- */
+        @media (max-width: 767px) {
+            body { padding: 0.5rem; }
+            h1 { font-size: 1.5rem; padding: 0.75rem; }
+            .market-grid-wrapper { overflow-x: visible; }
+            .market-grid { grid-template-columns: repeat(2, 1fr); min-width: 0; }
+            .modal-content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="market-table-root">
+        <h1>Enterprise Software Market Landscape</h1>
+        <div class="market-grid-wrapper">
+            <div id="market-grid" class="market-grid"></div>
+        </div>
+    </div>
+
+    <div id="modal-backdrop" class="modal-backdrop">
+        <div id="modal-content" class="modal-content">
+            </div>
+    </div>
+
+    <script>
+    (function() {
+        // --- DATA ---
+        const marketData = [
+            {
+                id: 101,
+                symbol: "CLM",
+                name: "Contract Management Platforms (CLM)",
+                category: "Core Operations",
+                description: "CLM platforms are software solutions that manage contracts throughout their entire lifecycle - from drafting and negotiation through approval, execution, compliance tracking, and renewal. These systems provide a centralized repository and workflow automation for all types of contracts.",
+                industrySummary: "The CLM software segment has seen rapid adoption as businesses recognize that effective contract management is strategic, not just administrative. Modern CLM tools increasingly incorporate AI for analytics and automation. The global CLM software market is growing robustly amid demand for better risk management and integration with procurement and legal workflows.",
+                featureOverlaps: "CLM features overlap with legal tech (document management and e-signature), procurement systems (integrating with sourcing and P2P suites), and CRM/Sales platforms (for sales contracts). Many CLM tools include or integrate with e-signature functionality and share similarities with document management systems.",
+                industryBodies: "World Commerce & Contracting (WorldCC)",
+                marketSizeLow: "$1.26 B (2024)",
+                marketSizeHigh: "$2.83 B (2024)",
+                avgCAGR: "~12.7%",
+                sources: "Grand View Research, Verified Market Research",
+                companies: [
+                    { name: "Icertis", website: "icertis.com", size: ">$250M ARR (Feb 2024)", description: "Icertis is a global leader in AI-powered contract intelligence, providing a platform that digitizes and structures contracts at scale to automate processes, ensure compliance, and unlock critical business insights.", differentiator: "AI-Powered Contract Intelligence: Positions itself as a pioneer in AI, transforming contracts from static documents into strategic assets. Its platform offers deep integrations with enterprise systems (ERP, CRM, S2P) and focuses on enterprise-wide, post-execution intent realization." },
+                    { name: "DocuSign CLM", website: "docusign.com", size: "$2.98B Revenue (FY2025)", description: "DocuSign CLM streamlines the contract lifecycle by automating manual tasks, orchestrating complex workflows, and reducing risk. It includes document generation, collaboration, and a searchable repository, integrated with DocuSign eSignature.", differentiator: "Trusted Brand and Ecosystem: Leverages its market-leading position in e-signature to provide an end-to-end agreement platform. Differentiates through its trusted brand, enterprise-grade scalability, and the world's largest ecosystem of agreement experts for support." },
+                    { name: "Conga CLM", website: "conga.com", size: "$388M Est. Annual Revenue", description: "Conga provides a Revenue Lifecycle Management platform that includes CPQ, CLM, and Document Automation solutions to enhance operational efficiency, reduce errors, and deliver value across the global customer community.", differentiator: "Unified Revenue Lifecycle Management: Offers a single, integrated platform for CPQ, CLM, and document automation that is open and API-first, designed to work with any CRM or ERP system and prevent ecosystem lock-in." },
+                    { name: "Agiloft", website: "agiloft.com", size: "$75M Est. Annual Revenue (Jul 2025)", description: "Agiloft provides an intelligent, data-first Contract Lifecycle Management (CLM) platform that uses AI to automate tasks, reduce risk, and empower users with actionable insights from their contract data.", differentiator: "No-Code Platform Flexibility: Its core differentiator is a highly configurable, no-code platform that allows business users to rapidly deploy and customize complex contract workflows without programming, backed by a 99% implementation satisfaction rate." },
+                    { name: "Sirion", website: "sirion.ai", size: "$198.5M Est. Annual Revenue", description: "Sirion is an enterprise CLM platform that uses AI to help businesses create, manage, and analyze contracts, focusing on extracting business value from strategy and negotiation through to post-signature performance and compliance.", differentiator: "Post-Signature Performance Management: Its key differentiator is its focus on managing contract performance after the contract is signed, using AI to monitor obligations, service levels, and pricing to prevent value leakage and ensure compliance." },
+                    { name: "Ironclad", website: "ironcladapp.com", size: "$115M Est. Annual Revenue", description: "Ironclad is an AI-powered contract management platform designed for legal and business teams to handle every aspect of the contract lifecycle, from creation and negotiation to storage and data analysis, in a single, user-friendly solution.", differentiator: "Legal-Centric Design with All-in-One Platform: Differentiates by being purpose-built for legal teams while remaining accessible to the entire business. It uniquely combines a DOCX-native editor, workflow automation, and an AI-powered repository into one platform to handle every contract type." },
+                    { name: "LinkSquares", website: "linksquares.com", size: "$50M ARR (2022)", description: "LinkSquares provides an AI-powered, all-in-one contract lifecycle management (CLM) and legal project management platform designed to help legal teams streamline contract processes, accelerate workflows, and gain data-driven insights.", differentiator: "Purpose-Built Native AI for Legal Teams: Its differentiator is its proprietary, native AI (LinkAI) built exclusively for legal tasks, unlike solutions using third-party models. This focus allows for more accurate data extraction, risk scoring, and faster insights from legal documents." },
+                    { name: "PandaDoc", website: "pandadoc.com", size: "$100M ARR (2024)", description: "PandaDoc is an all-in-one document automation software that helps businesses create, send, track, and e-sign documents like proposals, quotes, and contracts, aiming to streamline the entire document workflow.", differentiator: "Ease of Use and Sales Workflow Focus: Differentiates by focusing on a user-friendly, all-in-one solution for sales and mid-market teams. Its competitive advantage lies in its ease of use, extensive template library, and deep integrations with CRM platforms to accelerate deal cycles." },
+                    { name: "CobbleStone Software", website: "cobblestonesoftware.com", size: "167 Employees (Dec 2023)", description: "CobbleStone Software provides a highly configurable, AI-powered contract lifecycle management, vendor management, and e-procurement software solution used by thousands of professionals globally to manage contracts from request to renewal.", differentiator: "Longevity and Configurability: As one of the first CLM providers (founded in 1995), its key differentiator is its deep experience and a highly flexible, configurable, no-code platform (VISDOM® AI) that can be adapted to the specific needs of diverse industries." },
+                    { name: "Outlaw", website: "getoutlaw.com", size: "$5.1M Est. Annual Revenue", description: "Outlaw is a collaborative contract management solution that provides a human-centered, end-to-end platform for drafting, negotiation, e-signing, and storage, designed to streamline the contract lifecycle for all teams.", differentiator: "Human-Centered Design and Collaboration: Differentiates through its focus on a 'human-centered' user experience that simplifies collaboration between legal, sales, finance, and other teams." }
+                ]
+            },
+            {
+                id: 102,
+                symbol: "ERP",
+                name: "Enterprise Resource Management Platforms (ERP)",
+                category: "Core Operations",
+                description: "Integrated business management software that manages and integrates a company's financials, supply chain, operations, commerce, reporting, manufacturing, and human resource activities.",
+                industrySummary: "The ERP market is a mature, large segment dominated by established vendors. Growth is driven by the migration from on-premise to cloud-based SaaS suites. The competitive focus is shifting to the intelligence layer, with AI and analytics becoming key differentiators.",
+                featureOverlaps: "ERP systems are the central hub, overlapping with nearly every other category, including HRIS, S2P, CLM, and VMS. Many ERPs have their own modules for these functions.",
+                industryBodies: "N/A",
+                marketSizeLow: "$64.83 B (2024)",
+                marketSizeHigh: "$81.15 B (2024)",
+                avgCAGR: "~10-14%",
+                sources: "Fortune Business Insights, Forbes",
+                companies: [
+                    { name: "SAP S/4HANA", website: "sap.com", size: "$362.3B Market Cap", description: "A future-ready ERP system with built-in intelligent technologies, including AI, machine learning, and advanced analytics, that transforms business processes with intelligent automation.", differentiator: "In-Memory Database and Simplified Data Model: Runs exclusively on the SAP HANA in-memory database, enabling real-time data processing and analytics. Its key differentiator is the Universal Journal, which simplifies the financial data model and provides a single source of truth." },
+                    { name: "Oracle Fusion Cloud ERP", website: "oracle.com/erp/", size: "$614B Market Cap", description: "A complete, modern cloud ERP suite that provides teams with advanced capabilities, such as AI to automate manual processes, analytics to react to market shifts in real time, and automatic updates.", differentiator: "AI-Powered Automation and Cloud-Native Design: Differentiates with its extensive use of AI and machine learning to automate a high percentage of financial transactions. As a cloud-native suite, it is designed for continuous innovation and agility." },
+                    { name: "Microsoft Dynamics 365", website: "dynamics.microsoft.com", size: "$245.1B Revenue (2023)", description: "A portfolio of intelligent business applications (ERP and CRM) that connects teams, processes, and data to create exceptional customer experiences and operational agility.", differentiator: "Deep Integration with Microsoft Ecosystem: Its primary differentiator is its seamless, native integration with the broader Microsoft ecosystem, including Microsoft 365, Power BI, and the Azure cloud platform, creating a unified and familiar user experience." },
+                    { name: "Infor CloudSuite", website: "infor.com", size: "$3.2B Revenue (2019)", description: "Infor provides cloud-based, industry-specific enterprise software solutions that combine deep industry expertise with cutting-edge technology like generative AI and machine learning.", differentiator: "Deep Industry-Specific Functionality: Infor's core differentiator is its focus on 'last-mile' functionality tailored to specific micro-verticals (e.g., automotive, fashion, healthcare), which is built into the software rather than requiring extensive customization." },
+                    { name: "Workday", website: "workday.com", size: "$7.26B Revenue (FY2024)", description: "Workday is an AI-powered enterprise platform for managing people and money, providing unified solutions for finance, HR, and planning to help businesses adapt and drive forward.", differentiator: "Unified Finance and HR Platform: Its key differentiator is its ground-up, unified architecture that combines financials and Human Capital Management (HCM) on a single platform with one data model, providing a seamless experience." },
+                    { name: "NetSuite", website: "netsuite.com", size: "~$4.1B Est. Annual Revenue", description: "NetSuite provides a unified business management suite, encompassing ERP/Financials, CRM, and ecommerce. It was the first company to provide a fully cloud-based financial system.", differentiator: "Unified Cloud Platform for Mid-Market: Differentiates as a true all-in-one cloud business suite designed primarily for small and mid-sized businesses. Its unified data model across financials, CRM, and ecommerce provides a single source of truth." },
+                    { name: "Epicor", website: "epicor.com", size: "$1.05B Revenue (FY2022)", description: "Epicor provides industry-specific ERP software solutions that help manufacturing, distribution, retail, and building supply businesses streamline operations and drive growth.", differentiator: "Focus on 'Make, Move, Sell' Industries: Differentiates with deep, specialized expertise and solutions tailored specifically for the supply chain, particularly for mid-sized manufacturers, distributors, and retailers." },
+                    { name: "Acumatica", website: "acumatica.com", size: "700+ Employees", description: "Acumatica is a cloud ERP business management system built to meet the evolving needs of midmarket companies, offering intelligent, industry-focused functionality.", differentiator: "Growth-Friendly and Flexible Licensing: Its key differentiator is its unique, consumption-based licensing model that does not charge per user, allowing businesses to scale without incurring punitive costs." }
+                ]
+            },
+            {
+                id: 103,
+                symbol: "S2P",
+                name: "Source-to-Pay Platforms (S2P)",
+                category: "Procurement & Spend",
+                description: "End-to-end procurement platforms that manage the entire process from strategic sourcing and contract management to purchasing, invoicing, and payments, streamlining the buying process and supplier management.",
+                industrySummary: "The S2P market is characterized by comprehensive suite providers. The competitive focus is on creating a unified platform with a 'single source of truth' for all spend data. AI is a key vector, used for prescriptive recommendations, fraud detection, and community intelligence.",
+                featureOverlaps: "S2P suites are comprehensive and overlap significantly with CLM, VMS, Autonomous Sourcing, Bidding Software, and Purchase Order Platforms, often offering these as integrated modules.",
+                industryBodies: "N/A",
+                marketSizeLow: "$8.03 B (2024)",
+                marketSizeHigh: "$8.03 B (2024)",
+                avgCAGR: "~10.8%",
+                sources: "Fortune Business Insights",
+                companies: [
+                    { name: "Coupa", website: "coupa.com", size: "$725M Annual Revenue (2022)", description: "Coupa provides a cloud-based Business Spend Management (BSM) platform that offers a comprehensive suite of applications for procurement, invoicing, expense management, and payments.", differentiator: "Unified BSM Platform and Community Intelligence: Differentiates with its user-centric, unified platform covering all aspects of spend. Its 'Community.ai' leverages trillions of dollars in anonymized spend data to provide prescriptive insights and benchmarks." },
+                    { name: "SAP Ariba", website: "sap.com", size: "$1B Estimated Annual Revenue", description: "Now part of the SAP Business Network, SAP Ariba provides cloud-based solutions for spend management, connecting millions of buyers and suppliers globally to automate the entire source-to-pay process.", differentiator: "World's Largest B2B Network: Its primary differentiator is the scale of the SAP Business Network, which facilitates trillions of dollars in commerce annually. This vast network provides unparalleled opportunities for supplier discovery and collaboration." },
+                    { name: "Jaggaer", website: "jaggaer.com", size: "$300M Estimated Annual Revenue", description: "JAGGAER offers an AI-powered source-to-pay solution and supplier collaboration platform designed to transform procurement into a value-adding force, covering both direct and indirect spend.", differentiator: "Autonomous Commerce and Industry Focus: Differentiates with its 'Autonomous Commerce' vision, using AI to automate repetitive tasks and provide smart-match recommendations. It also has deep expertise in specific verticals like public sector and manufacturing." },
+                    { name: "GEP SMART", website: "gep.com", size: "586 U.S. Employees", description: "GEP SMART is a cloud-native, AI-powered, unified source-to-pay (S2P) platform for managing both direct and indirect spend, designed by procurement experts to optimize every step of the process.", differentiator: "Unified Platform Designed by Practitioners: Differentiates by being a unified platform (not a collection of acquired tools) designed by procurement professionals. It leverages AI and a mobile-native architecture to provide an intuitive, 'consumerized' user experience." },
+                    { name: "Ivalua", website: "ivalua.com", size: "$134M Total Funding", description: "Ivalua provides a unified Source-to-Pay platform for managing all categories of spend (indirect, direct, services) and all suppliers, combining pre-packaged best practices with no-code/low-code flexibility.", differentiator: "Platform Flexibility and Direct Materials Focus: Differentiates through a highly flexible and configurable single platform that excels at managing complex, direct materials spend in addition to indirect spend, without requiring custom code." },
+                    { name: "Basware", website: "basware.com", size: "$181.1M Revenue (2021)", description: "Basware is a global leader in AP Automation and cloud-based Procure-to-Pay (P2P) solutions, offering an Invoice Lifecycle Management Platform powered by invoice-centric AI.", differentiator: "AP Automation and e-Invoicing Network: Differentiates with its deep expertise in Accounts Payable (AP) automation and the world's largest open business network for sending and receiving e-invoices, ensuring global compliance." },
+                    { name: "Zycus", website: "zycus.com", size: "$364.4M Est. Annual Revenue", description: "Zycus provides a comprehensive, AI-powered Source-to-Pay suite of procurement solutions that helps enterprises unlock savings, maximize efficiency, and ensure compliance through its Merlin Agentic AI platform.", differentiator: "Agentic AI and Modular Suite: Differentiates with its Merlin Agentic AI platform, which uses autonomous agents for tasks like spend analysis and supplier negotiations. Its modular suite allows customers to adopt specific solutions and expand over time." }
+                ]
+            },
+            {
+                id: 104,
+                symbol: "ORCH",
+                name: "Procurement Orchestration Platforms",
+                category: "Procurement & Spend",
+                description: "An intelligent 'front door' or workflow layer that sits on top of existing ERP and procurement systems to coordinate procurement activities, automate workflows, and provide unified intelligence.",
+                industrySummary: "This emerging, high-growth market was created to solve 'integration debt' from the proliferation of best-of-breed apps. It provides a unified user experience and workflow layer, re-centralizing process control. Major S2P/ERP vendors are likely to enter via acquisition.",
+                featureOverlaps: "These platforms are designed to integrate with and orchestrate workflows across S2P, ERP, CLM, and other procurement point solutions. They are less about feature overlap and more about creating a unifying layer on top.",
+                industryBodies: "N/A",
+                marketSizeLow: "$300 M (2024)",
+                marketSizeHigh: "$500 M (2024)",
+                avgCAGR: "~21.4%",
+                sources: "Market Research Future, Global Market Estimates",
+                companies: [
+                    { name: "Zip", website: "ziphq.com", size: "$333M Total Funding", description: "Zip provides an intake-to-pay platform that offers a single front door for employees to initiate any purchase or vendor request, orchestrating the entire procurement process across different teams and systems.", differentiator: "Intake-to-Pay Orchestration: Differentiates by focusing on the entire intake-to-pay lifecycle, providing an intuitive user experience that drives adoption while orchestrating complex, cross-functional approval workflows." },
+                    { name: "ORO Labs", website: "orolabs.ai", size: "$82M Total Funding", description: "ORO Labs offers a GenAI procurement orchestration platform that coordinates people, processes, and systems, providing a centralized and intuitive interface for employees to initiate and manage purchases.", differentiator: "No-Code Workflows and User Experience: Differentiates with its focus on a simple, intuitive user experience that requires no training. Its no-code platform allows for easy creation and customization of workflows." },
+                    { name: "Tropic", website: "tropic.app", size: "$67.1M Total Funding", description: "Tropic is an intelligent spend management platform that integrates market intelligence with spend control capabilities, using AI to automate procurement workflows and empower finance leaders.", differentiator: "Data-Driven SaaS Procurement: Differentiates by combining its procurement orchestration workflow with a robust dataset of supplier and pricing intelligence, turning technology procurement into a 'buyer's market'." },
+                    { name: "Kissflow Procurement Cloud", website: "kissflow.com", size: "$1.03M Total Funding", description: "Kissflow Procurement Cloud is a flexible, modular procure-to-pay suite that enables businesses to streamline their procurement processes, from purchasing to vendor management, on a single platform.", differentiator: "Workflow-Centric Flexibility: Built on a powerful low-code/no-code workflow platform, its key differentiator is its extreme flexibility and customizability, allowing organizations to build and adapt complex procurement workflows." },
+                    { name: "Airbase", website: "airbase.com", size: "$91M Total Funding", description: "Airbase provides an all-in-one spend management platform that combines guided procurement, AP automation, expense management, and corporate cards to give finance teams control and visibility.", differentiator: "Unified Spend Management: Differentiates by combining intake and procurement orchestration with its own corporate card and expense management modules, offering a single, consolidated platform for all company spending." },
+                    { name: "Arkestro", website: "arkestro.com", size: "$78M Total Funding", description: "Arkestro is a Predictive Procurement Platform that uses AI and a proprietary gaming theory model to transform how procurement drives value, efficiency, and resilience through automated sourcing and negotiations.", differentiator: "Predictive Procurement and Negotiation Science: Its core differentiator is its patented 'Predictive Procurement' technology, which uses AI and negotiation science to predict optimal pricing and automate supplier negotiations." }
+                ]
+            },
+            {
+                id: 105,
+                symbol: "HRIS",
+                name: "HRIS and Workforce Management",
+                category: "HR & Workforce",
+                description: "Platforms for managing core human resources (HRIS), payroll, benefits, talent acquisition, and workforce management (scheduling, time & attendance).",
+                industrySummary: "A large market defined by the 'all-in-one' platform concept. Competition exists between cloud-native suites (like Workday) and ERP vendors (SAP, Oracle). Specialized players leverage deep expertise in areas like payroll (ADP) or workforce management (UKG) to compete.",
+                featureOverlaps: "HRIS/WFM platforms overlap with ERP (which have HR modules), VMS, and Freelancer Management Systems as organizations move toward a 'total workforce' view.",
+                industryBodies: "SHRM, HRCI",
+                marketSizeLow: "$17.79 B (WFM only, 2024)",
+                marketSizeHigh: "$43 B (HCM, mid-2020s)",
+                avgCAGR: "~8-19%",
+                sources: "Global Growth Insights",
+                companies: [
+                    { name: "Workday HCM", website: "workday.com", size: "$7.26B Revenue (FY2024)", description: "Workday provides a leading enterprise cloud platform for Human Capital Management (HCM) and Financial Management, helping customers adapt and thrive in a changing world.", differentiator: "Unified Cloud-Native Platform: Its core differentiator is its 'Power of One' architecture—a single, unified, cloud-native system for HR, finance, and planning, which provides a consistent user experience and a single source of truth for all data." },
+                    { name: "SAP SuccessFactors", website: "sap.com/hcm", size: "SAP: $362.3B Market Cap", description: "SAP SuccessFactors is a cloud-based human capital management (HCM) software suite that provides solutions for core HR and payroll, talent management, HR analytics, and employee experience management.", differentiator: "Integration with SAP ERP Ecosystem: Differentiates through its deep, native integration with the broader SAP S/4HANA ERP ecosystem, offering a comprehensive, end-to-end solution for businesses running on SAP." },
+                    { name: "Oracle Fusion Cloud HCM", website: "oracle.com/hcm", size: "Oracle: $614B Market Cap", description: "Oracle Fusion Cloud HCM is a complete cloud suite that connects every human resource process—from hire to retire—providing a consistent experience across devices and enabling organizations to make smarter workforce decisions.", differentiator: "AI-Powered Skills Engine: Differentiates with its AI-driven platform and a dynamic skills engine that helps organizations understand and build their talent pipeline, connecting people, skills, and business priorities." },
+                    { name: "ADP Workforce Now", website: "adp.com", size: "$19.2B Revenue (FY2024)", description: "ADP Workforce Now is an all-in-one, cloud-based HCM platform designed for mid-sized to large organizations (50-1,000+ employees), integrating HR, payroll, time, talent, and benefits.", differentiator: "Payroll Expertise and Compliance: Its key differentiator is ADP's unparalleled expertise and scale in payroll and tax compliance, offering a robust, reliable, and intelligent platform backed by decades of experience." },
+                    { name: "UKG", website: "ukg.com", size: "15,024 Employees", description: "UKG is a leading provider of HR, payroll, and workforce management solutions, offering culture-driven, AI-guided HCM suites designed to inspire every organization to become a great place to work.", differentiator: "Best-of-Breed HR and WFM: Differentiates by combining a market-leading HRIS (formerly Ultimate Software) with a dominant workforce management solution (formerly Kronos), providing deep functional strength." },
+                    { name: "Dayforce", website: "dayforce.com", size: "$1.76B Revenue (2024)", description: "Dayforce is a global HCM software company that provides a single, AI-powered platform for all people operations, including HR, payroll, benefits, workforce management, and talent management.", differentiator: "Continuous Calculation Payroll: Its primary differentiator is its continuous calculation engine, which processes payroll data in real-time as changes occur, eliminating the traditional batch process and enabling features like on-demand pay." },
+                    { name: "Paycom", website: "paycom.com", size: "$1.88B Revenue (2024)", description: "Paycom offers a comprehensive, cloud-based human capital management software solution delivered as a single application for all HR functions, from recruitment to retirement.", differentiator: "Employee Self-Service Payroll (Beti®): Differentiates with its Beti® technology, which empowers employees to do their own payroll, finding and fixing errors before submission, which dramatically reduces the administrative burden on HR teams." },
+                    { name: "Paylocity", website: "paylocity.com", size: "$1.4B Revenue (FY2024)", description: "Paylocity provides a unified platform for HR and payroll that helps businesses streamline operations, attract and retain talent, and build a strong company culture.", differentiator: "Focus on Employee Experience and Connection: Differentiates by focusing on modernizing the employee experience with tools for communication, collaboration, recognition, and employee voice, all integrated within its core HR and payroll platform." }
+                ]
+            },
+            {
+                id: 106,
+                symbol: "VMS",
+                name: "Vendor Management Platforms (VMS)",
+                category: "HR & Workforce",
+                description: "Platforms focused on managing the lifecycle of the contingent (non-employee) workforce, including sourcing from staffing suppliers, onboarding, compliance, performance tracking, and invoicing.",
+                industrySummary: "A well-established market driven by the rise of the gig economy and the need for compliance in managing external labor. Competition is between specialized leaders (SAP Fieldglass, Beeline) and integrated modules within larger HCM (Workday) and Spend Management (Coupa) suites.",
+                featureOverlaps: "VMS overlaps with HRIS (for a 'total workforce' view), S2P suites (managing services spend), and Freelancer Management Systems (which focus on individual freelancers vs. staffing agency-supplied workers).",
+                industryBodies: "Staffing Industry Analysts (SIA)",
+                marketSizeLow: "$8.02 B (2024)",
+                marketSizeHigh: "$8.02 B (2024)",
+                avgCAGR: "~10.9%",
+                sources: "Business Research Insights",
+                companies: [
+                    { name: "SAP Fieldglass", website: "sap.com", size: "1,000 Employees", description: "SAP Fieldglass solutions simplify finding, engaging, and managing all types of external talent, helping businesses manage costs, ensure compliance, and improve workforce quality in over 180 countries.", differentiator: "Global Reach and SAP Integration: Differentiates with its unparalleled global reach (180+ countries, 22+ languages) and deep, productized integrations with the SAP ecosystem, providing a holistic view of all business processes and spend." },
+                    { name: "Beeline", website: "beeline.com", size: "819 Employees", description: "Beeline offers a comprehensive vendor management system (VMS) that connects businesses to the global extended workforce, solving the complexities of managing contingent talent from source to invoice.", differentiator: "Independent and Configurable Platform: As the largest independent VMS provider, it differentiates through its vendor-neutral approach and a highly configurable platform that can be tailored to the specific needs of complex, enterprise-level programs." },
+                    { name: "Magnit VMS", website: "magnitglobal.com", size: "3,000 Employees", description: "Magnit provides a robust vendor management system (VMS) as part of its integrated workforce management platform, managing the end-to-end workflow of the contingent workforce with AI-driven features.", differentiator: "Integrated MSP and VMS with Data Leadership: Differentiates by combining its VMS technology with its market-leading Managed Service Provider (MSP) services. It leverages one of the industry's largest contingent workforce datasets to provide data-driven insights." },
+                    { name: "Workday VMS (VNDLY)", website: "workday.com", size: "Workday: $7.26B Revenue", description: "Workday VMS (formerly VNDLY) is a software solution that helps organizations manage the entire lifecycle of their contingent workers—from sourcing to invoicing—within the Workday ecosystem.", differentiator: "Native Integration with Workday HCM: Differentiates by being natively integrated with Workday's core Human Capital Management (HCM) platform, enabling a true 'total workforce' management approach with a single system of record for both employees and contractors." },
+                    { name: "Coupa Contingent Workforce", website: "coupa.com", size: "Coupa: 3,353 Employees", description: "Part of the Coupa Business Spend Management (BSM) platform, this solution helps businesses source, procure, onboard, and manage contingent workers, SOW agreements, and MSP relationships.", differentiator: "Unified with Business Spend Management (BSM): Its key differentiator is its seamless integration within the unified Coupa BSM platform, providing a single view and control over services spend alongside all other categories of procurement." }
+                ]
+            },
+            {
+                id: 107,
+                symbol: "SIG",
+                name: "Signature Management Platforms",
+                category: "Sales & Marketing",
+                description: "Primarily e-signature solutions that facilitate electronic signature collection, document routing, authentication, and audit trails for legal and business documents.",
+                industrySummary: "A market that experienced explosive growth due to remote work. Dominated by DocuSign, with strong competition from Adobe. The market is evolving from point solutions to broader 'agreement management' platforms and is seeing commoditization as a feature in CLM and sales platforms.",
+                featureOverlaps: "E-signature is increasingly a feature within CLM platforms. It also overlaps with sales platforms (for quotes/contracts) and document management systems.",
+                industryBodies: "N/A",
+                marketSizeLow: "$5.2 B (2024)",
+                marketSizeHigh: "$9.8 B (2024)",
+                avgCAGR: "~25-40%",
+                sources: "Various market reports",
+                companies: [
+                    { name: "DocuSign", website: "docusign.com", size: "$2.98B Revenue (FY2025)", description: "DocuSign is the market leader in electronic signatures and intelligent agreement management, providing a platform to help organizations connect and automate how they prepare, sign, act on, and manage agreements.", differentiator: "Market Leadership and Intelligent Agreement Management Platform: Differentiates as the #1 e-signature provider, leveraging its trusted global brand to build out a comprehensive Intelligent Agreement Management (IAM) platform with AI-powered analytics." },
+                    { name: "Adobe Sign", website: "adobe.com/sign", size: "Adobe: $21.5B Revenue (2023)", description: "Adobe Acrobat Sign is an e-signature solution that is part of the Adobe Document Cloud, allowing users to send, sign, track, and manage signature processes using a browser or mobile device.", differentiator: "Native Integration with Adobe Document Cloud: Its primary differentiator is its deep, native integration with Adobe Acrobat and the broader Adobe ecosystem, making it the default choice for businesses with PDF-centric document workflows." },
+                    { name: "SignNow (by airSlate)", website: "signnow.com", size: "501-1,000 Employees (airSlate)", description: "SignNow is an e-signature solution that enables users to sign documents, generate agreements, and accept payments with legally-binding eSignatures, designed to be easy to use and competitively priced.", differentiator: "Value and Unlimited Users: Differentiates with a strong value proposition, offering competitive and transparent pricing that includes unlimited users on all plans, which encourages organization-wide adoption without incurring per-seat costs." },
+                    { name: "Dropbox Sign", website: "hellosign.com", size: "51-200 Employees", description: "Dropbox Sign is an e-signature solution that helps businesses get contracts signed faster with tools to prepare, send, sign, and track documents effortlessly, now integrated with the Dropbox ecosystem.", differentiator: "Ease of Use and API-First Approach: Differentiates with a focus on simplicity and a highly-rated, easy-to-implement API that allows developers to embed a fully customizable, on-brand signing experience directly into their applications." },
+                    { name: "PandaDoc", website: "pandadoc.com", size: "$100M ARR (2024)", description: "PandaDoc is an all-in-one document automation platform that includes e-signature capabilities, helping sales and marketing teams create, send, and track proposals, quotes, and contracts.", differentiator: "Document Workflow Automation for Sales: Differentiates by embedding e-signatures within a broader document generation and workflow automation platform tailored for sales teams, integrating deeply with CRM systems to accelerate the quote-to-cash process." }
+                ]
+            },
+            {
+                id: 108,
+                symbol: "PO",
+                name: "Purchase Order Platforms",
+                category: "Procurement & Spend",
+                description: "Software that automates and streamlines the purchasing process, including purchase requisition, approval workflows, PO creation, and budget tracking, often targeted at SMBs.",
+                industrySummary: "A thriving market catering to organizations that find full S2P suites too complex. Competition is defined by ease of use, rapid deployment, and seamless integration with accounting software (like QuickBooks). Larger S2P/ERP vendors offer PO management as a core module.",
+                featureOverlaps: "This is a core feature set within larger S2P and ERP platforms. Standalone PO platforms focus on deep integration with accounting software.",
+                industryBodies: "N/A",
+                marketSizeLow: "$7.61 B (2024)",
+                marketSizeHigh: "$8.03 B (2024)",
+                avgCAGR: "~10-15%",
+                sources: "OpenPR, Fortune Business Insights",
+                companies: [
+                    { name: "Coupa Procurement", website: "coupa.com", size: "Coupa: $725M Revenue", description: "Coupa Procurement is part of Coupa's Business Spend Management platform, helping businesses control spending and purchasing with a consumer-like experience that drives user adoption and compliance.", differentiator: "User-Centric Experience and Unified Spend Management: Differentiates with its intuitive, 'consumerized' shopping experience that drives high employee adoption, ensuring more spend is captured and managed compliantly within its unified BSM platform." },
+                    { name: "Precoro", website: "precoro.com", size: "$15M Est. Annual Revenue", description: "Precoro is a cloud-based procurement and purchase order software solution for small and medium-sized businesses that automates purchasing workflows and provides real-time budget control.", differentiator: "Budget Control and Ease of Use for SMBs: Its key differentiator is a strong focus on real-time budget tracking and control, combined with a user-friendly interface specifically designed to help SMBs streamline procurement." },
+                    { name: "Procurify", website: "procurify.com", size: "$82.5M Total Funding", description: "Procurify is an Intelligent Spend Management platform that provides organizations with real-time visibility and control over their business spend through a comprehensive procure-to-pay solution.", differentiator: "Proactive Spend Management for Mid-Market: Differentiates by providing a seamless procure-to-pay experience for the entire organization, enabling proactive and responsible spend decisions with flexible workflows." },
+                    { name: "Basware e-Procurement", website: "basware.com", size: "Basware: $181.1M Revenue", description: "Basware e-Procurement software provides a holistic view of suppliers and spend, helping organizations drive cost savings, ensure compliance with negotiated contracts, and mitigate supply chain risk.", differentiator: "Guided Purchasing and Network Connectivity: Differentiates with its 'Guided Purchasing' feature that ensures users buy from preferred vendors at negotiated prices, and its connection to the extensive Basware Network for supplier collaboration." },
+                    { name: "Kissflow Procurement Cloud", website: "kissflow.com", size: "256 Employees", description: "Kissflow Procurement Cloud is a flexible procure-to-pay suite that enables businesses of all sizes to streamline their procurement processes, from purchasing to vendor management, on a single platform.", differentiator: "Customizable Workflows: Built on a low-code platform, its key differentiator is the ability to create highly customized and flexible approval workflows for various procurement use-cases, adapting to unique business processes." }
+                ]
+            },
+            {
+                id: 109,
+                symbol: "AIW",
+                name: "AI Writing Platforms",
+                category: "AI & Automation",
+                description: "Platforms powered by large language models (LLMs) that assist with or automate the creation of written content for marketing, sales, and communication.",
+                industrySummary: "An explosive growth market with a wide range of valuations. Competition is fierce between foundational model providers (OpenAI), specialized applications targeting verticals (Jasper for marketers), and integrated features within established tools (GrammarlyGO).",
+                featureOverlaps: "AI writing is becoming a feature in many other platforms, including CRM, sales enablement, and marketing automation tools.",
+                industryBodies: "N/A",
+                marketSizeLow: "$421 M (2024)",
+                marketSizeHigh: "$65 B (2024, broader GenAI)",
+                avgCAGR: "~17-36%",
+                sources: "Verified Market Research, Market Research Future",
+                companies: [
+                    { name: "OpenAI (GPT-4)", website: "openai.com", size: "$3.7B Est. Revenue (2024)", description: "OpenAI is an AI research and deployment company. Its GPT models are foundational technologies for many AI writing applications.", differentiator: "Foundational AI Research and Model Performance: As the creator of the GPT series, its primary differentiator is the state-of-the-art performance, versatility, and reasoning capabilities of its underlying large language models." },
+                    { name: "Jasper", website: "jasper.ai", size: "$80M Revenue (2022)", description: "Jasper is a generative AI platform built for marketing success, empowering marketers to create on-brand written and visual content seamlessly across platforms.", differentiator: "Built for Marketers and Brand Voice: Differentiates by being purpose-built for marketing teams, with a focus on creating high-performing, on-brand content. Users can train Jasper on their specific brand voice and style guides." },
+                    { name: "GrammarlyGO", website: "grammarly.com", size: "$545M Total Funding", description: "Grammarly is an AI communication partner that provides writing assistance. GrammarlyGO is its generative AI feature for creating and refining text.", differentiator: "Massive User Base and Integrated Writing Assistance: Differentiates by integrating generative AI into its already-massive platform of over 40 million users. It combines AI writing with its best-in-class grammar and style correction tools." },
+                    { name: "Copy.ai", website: "copy.ai", size: "$13.9M Total Funding", description: "Copy.ai is an AI-based platform offering content creation and copywriting solutions, designed to help businesses streamline their marketing operations and overcome writer's block.", differentiator: "Multi-Model Approach and Workflow Automation: Differentiates by using a multi-model approach (tapping into GPT, Claude, etc.) to deliver more nuanced content. It also offers a 'Workflow as API' feature for advanced automation." },
+                    { name: "Writesonic", website: "writesonic.com", size: "$3.1M Total Funding", description: "Writesonic is an AI-based platform offering copywriting and content creation tools that can produce articles, summaries, and AI-generated images, targeting content creators and businesses.", differentiator: "All-in-One Content Creation Suite: Differentiates by offering a comprehensive suite of tools that goes beyond text, including AI-powered article writers, paraphrasing tools, and an AI image generator (Photosonic)." }
+                ]
+            },
+            {
+                id: 110,
+                symbol: "AS",
+                name: "Autonomous Sourcing Platforms",
+                category: "AI & Automation",
+                description: "AI-native platforms that use software 'bots' to automate sourcing events (e.g., RFQs) with minimal human intervention, often for tactical or tail spend.",
+                industrySummary: "An emerging, hyper-growth segment within procurement tech. The value proposition is a clear and high ROI by automating high-volume, low-complexity sourcing. Competition is between specialized AI vendors and larger S2P suites incorporating similar features.",
+                featureOverlaps: "This is an advanced form of Bidding Software. It's a key feature being adopted by larger S2P platforms.",
+                industryBodies: "N/A",
+                marketSizeLow: "N/A (Captured in S2P)",
+                marketSizeHigh: "N/A (Captured in S2P)",
+                avgCAGR: ">20%",
+                sources: "Internal analysis based on S2P growth",
+                companies: [
+                    { name: "Keelvar", website: "keelvar.com", size: "$42.92M Total Funding", description: "Keelvar provides an AI-driven sourcing automation and optimization platform that uses sourcing bots to autonomously run sourcing events, reducing manual effort and delivering cost savings.", differentiator: "Sourcing Bots and Optimization: A pioneer in the space, its key differentiator is the use of intelligent sourcing bots that can autonomously manage RFQs and complex sourcing events, combined with powerful optimization engines." },
+                    { name: "Arkestro", website: "arkestro.com", size: "$78M Total Funding", description: "Arkestro is a Predictive Procurement Platform that uses AI and behavioral science to help companies automate sourcing, manage supplier negotiations, and achieve significant cost savings.", differentiator: "Predictive Procurement and Embedded Negotiations: Differentiates with its 'Predictive Procurement' engine that uses AI to suggest optimal sourcing strategies and pricing. It embeds negotiation directly into the procurement cycle." },
+                    { name: "Fairmarkit", website: "fairmarkit.com", size: "$78M Total Funding", description: "Fairmarkit is an autonomous sourcing platform that automates the procurement of tail spend by using AI to identify suppliers and automatically solicit and analyze quotes for low-value purchases.", differentiator: "Tail Spend Automation: Its core differentiator is its specific focus on automating the sourcing process for tail spend—the high volume of small purchases that are often unmanaged." },
+                    { name: "Globality", website: "globality.com", size: "$310.6M Total Funding", description: "Globality is an AI-powered platform for sourcing complex services. It uses a conversational AI interface to autonomously match corporate buyers with the best service suppliers for their needs.", differentiator: "AI for Complex Services Sourcing: Differentiates by focusing exclusively on the complex and often manual process of sourcing professional services (e.g., consulting, marketing, legal). Its AI acts as a 'scoping' and matching engine." },
+                    { name: "Pactum", website: "pactum.com", size: "Not specified", description: "Pactum is an AI-based system that helps global companies to autonomously offer personalized, commercial negotiations on a massive scale.", differentiator: "AI Chatbot for Negotiations: Its unique differentiator is its use of an AI-powered chatbot that negotiates directly with suppliers via a chat interface, focusing on long-tail contracts to unlock value through automated, parallel negotiations." }
+                ]
+            },
+            {
+                id: 111,
+                symbol: "BID",
+                name: "Bidding Software in Procurement",
+                category: "Procurement & Spend",
+                description: "Also known as e-sourcing software, these tools manage competitive bidding events like Requests for Proposals (RFPs), Requests for Quotes (RFQs), and reverse auctions.",
+                industrySummary: "A mature market largely dominated by modules within comprehensive S2P suites. The key value proposition is seamless integration with the rest of the procurement lifecycle (contracts, payments). Specialized vendors compete on ease of use or focus on specific sectors (e.g., public sector).",
+                featureOverlaps: "This is a core module within S2P suites. It is closely related to RFP Writing Software (from the buyer's perspective) and Autonomous Sourcing (the next evolution).",
+                industryBodies: "N/A",
+                marketSizeLow: "$1.8 B (2023)",
+                marketSizeHigh: "$8.2 B (Broader market, 2024)",
+                avgCAGR: "~8.38%",
+                sources: "Various market reports",
+                companies: [
+                    { name: "SAP Ariba Sourcing", website: "sap.com", size: "SAP Ariba: $1B Est. Revenue", description: "A widely used e-sourcing solution for managing RFPs, RFQs, and e-auctions, integrated with the SAP Business Network to connect buyers with millions of suppliers.", differentiator: "Integration with SAP Business Network: Its primary differentiator is its deep integration with the world's largest B2B network, providing unparalleled access to a global supplier base for competitive sourcing events." },
+                    { name: "Coupa Strategic Sourcing", website: "coupa.com", size: "Coupa: $725M Revenue", description: "A module within the Coupa BSM platform that enables businesses to run sourcing events, manage RFPs and auctions, and collaborate with suppliers to drive savings.", differentiator: "Unified with Business Spend Management: Differentiates by being an integral part of a unified spend management platform, allowing for seamless data flow from sourcing event to contract, purchase, and payment." },
+                    { name: "Jaggaer Sourcing", website: "jaggaer.com", size: "$300M Est. Revenue", description: "Provides comprehensive RFP and e-auction capabilities, including advanced optimization for complex bids, and has deep expertise in both public sector and commercial industries.", differentiator: "Sourcing and Advanced Optimization: Differentiates with its powerful and flexible sourcing tools, including advanced bid optimization capabilities that are particularly valuable for complex categories in manufacturing and public sector procurement." },
+                    { name: "Ivalua", website: "ivalua.com", size: "$134M Total Funding", description: "Ivalua provides a unified source-to-pay platform that includes robust strategic sourcing capabilities for managing RFx events, auctions, and supplier collaboration for both direct and indirect spend.", differentiator: "Unified Platform for Direct and Indirect Sourcing: Differentiates with its ability to manage complex sourcing for both direct materials and indirect goods and services on a single, highly configurable platform." },
+                    { name: "GEP SMART", website: "gep.com", size: "586 U.S. Employees", description: "An AI-powered, unified source-to-pay platform that includes a comprehensive sourcing solution to help businesses identify suppliers, run sourcing events, and achieve best-value agreements.", differentiator: "AI-Powered and Unified Platform: Differentiates by leveraging its native AI capabilities across the entire sourcing process on a single, unified platform, from spend analysis to supplier evaluation and award." }
+                ]
+            },
+            {
+                id: 112,
+                symbol: "SRM",
+                name: "Supplier Risk Management Platforms",
+                category: "Procurement & Spend",
+                description: "Software for assessing, monitoring, and mitigating risks associated with suppliers and third parties, including financial, compliance, operational, and reputational risks.",
+                industrySummary: "A high-growth market driven by increased regulation (e.g., ESG) and supply chain disruptions. The landscape includes specialized TPRM vendors, modules within larger GRC platforms, and specific solutions for supply chain resilience. The trend is toward a holistic, continuous approach to risk monitoring.",
+                featureOverlaps: "This functionality is often a module within S2P suites and GRC platforms. It's closely linked to VMS for managing contractor compliance.",
+                industryBodies: "N/A",
+                marketSizeLow: "$7 B (mid-2020s)",
+                marketSizeHigh: "$10.7 B (mid-2020s)",
+                avgCAGR: "~15%",
+                sources: "Various market reports",
+                companies: [
+                    { name: "Aravo", website: "aravo.com", size: "105 Employees (Dec 2022)", description: "Aravo provides a leading third-party risk management solution that helps organizations assess and monitor supplier compliance, with configurable workflows for managing financial, compliance, and operational risks.", differentiator: "Deep Third-Party Risk Management Focus: Differentiates with its deep, purpose-built functionality for the entire third-party risk management lifecycle, particularly for large, complex enterprises." },
+                    { name: "NAVEX (RiskRate)", website: "navex.com", size: "1,001-5,000 Employees", description: "NAVEX is a global leader in governance, risk, and compliance (GRC) solutions. Its RiskRate platform offers third-party risk management, including due diligence screenings and continuous monitoring.", differentiator: "Integrated GRC and Ethics Focus: Differentiates by integrating third-party risk management into a broader suite of ethics and compliance solutions, including policy management and incident reporting." },
+                    { name: "OneTrust", website: "onetrust.com", size: "2,300 Employees", description: "OneTrust is a trust intelligence platform that helps organizations manage privacy, security, ethics, and ESG programs. Its Supplier Lifecycle & Risk module helps manage vendor onboarding and assess various risks.", differentiator: "Trust Intelligence Platform: Differentiates by positioning supplier risk within a comprehensive 'Trust Intelligence' platform, leveraging its deep expertise in privacy and data governance." },
+                    { name: "Riskonnect", website: "riskonnect.com", size: "501-1,000 Employees", description: "Riskonnect provides an integrated risk management software solution that can include supplier risk as part of a holistic enterprise risk management (ERM) program, consolidating all risk data in one place.", differentiator: "Integrated Enterprise Risk Management (ERM): Its key differentiator is the ability to manage supplier risk as an integrated component of a broader ERM strategy, allowing organizations to view third-party risk alongside other operational and strategic risks." },
+                    { name: "Resilinc", website: "resilinc.com", size: "201-500 Employees", description: "Resilinc is a supply chain risk management platform focused on improving the resilience of supplier networks through supply chain mapping, monitoring for disruptions, and proactive risk mitigation.", differentiator: "Supply Chain Mapping and Disruption Monitoring: Differentiates with its deep focus on supply chain resilience, using AI to map multi-tier supply chains and provide real-time alerts for potential disruptions." }
+                ]
+            },
+            {
+                id: 113,
+                symbol: "RFPW",
+                name: "RFP Writing Software",
+                category: "Sales & Marketing",
+                description: "Also known as proposal management software, these platforms help sales and bid teams improve the efficiency and quality of their responses to RFPs, RFIs, and security questionnaires.",
+                industrySummary: "A well-defined niche market driven by the need to increase sales efficiency. Competition is defined by the sophistication of AI-powered content libraries and deep CRM integration. Leaders automate the reuse of pre-approved content to speed up response times.",
+                featureOverlaps: "These tools are the 'sell-side' equivalent of 'buy-side' Bidding Software. They integrate deeply with CRM and sometimes CLM systems.",
+                industryBodies: "Association of Proposal Management Professionals (APMP)",
+                marketSizeLow: "$2.33 B (2022)",
+                marketSizeHigh: "$2.33 B (2022)",
+                avgCAGR: "~12.2%",
+                sources: "Various market reports",
+                companies: [
+                    { name: "RFPIO", website: "rfpio.com", size: "501-1,000 Employees", description: "A leading response management platform that helps sales, marketing, and proposal teams collaborate on and respond to RFPs, RFIs, and security questionnaires more efficiently.", differentiator: "AI-Powered Response Engine and Integrations: Differentiates with its AI-powered recommendation engine (RFPIO LookUp) that intelligently suggests answers from a centralized library and its extensive set of integrations." },
+                    { name: "Loopio", website: "loopio.com", size: "5 Employees", description: "A response management platform that helps companies streamline their process for responding to RFPs, RFIs, and security questionnaires by centralizing content and automating answers.", differentiator: "Content Library Management and Collaboration: Its core differentiator is its focus on building and maintaining a 'single source of truth' content library. Its platform excels at content management and collaborative workflows." },
+                    { name: "Qvidian (by Upland)", website: "uplandsoftware.com/qvidian", size: "Upland: 1,001-5,000 Employees", description: "An enterprise-grade proposal and RFP automation software that enables teams to create high-quality, personalized sales documents quickly by leveraging pre-approved content.", differentiator: "Enterprise-Grade Content Automation: As a long-standing player, it differentiates with its robust content management and automation capabilities, designed for the complex needs of large, global enterprises." },
+                    { name: "Seismic", website: "seismic.com", size: "1,001-5,000 Employees", description: "A leading sales enablement platform that includes document generation and proposal automation capabilities, allowing teams to create personalized, on-brand sales documents at scale.", differentiator: "Integrated Sales Enablement Platform: Differentiates by offering proposal automation as a component of a broader sales enablement platform. This provides a unified solution for managing all sales content, training, and buyer engagement." },
+                    { name: "PandaDoc", website: "pandadoc.com", size: "$100M ARR (2024)", description: "An all-in-one document automation platform that helps teams create, send, and e-sign proposals, quotes, and contracts, streamlining the entire sales document workflow.", differentiator: "End-to-End Document Workflow: While not a dedicated RFP tool, it competes by offering a complete, end-to-end solution for creating and managing all types of sales documents, from proposal to signature, with a strong emphasis on ease of use." }
+                ]
+            },
+            {
+                id: 114,
+                symbol: "CPQ",
+                name: "Configure Price Quote (CPQ) Software",
+                category: "Sales & Marketing",
+                description: "Sales tools that help companies define complex product configurations, manage pricing rules, and generate accurate quotes for B2B customers.",
+                industrySummary: "A key part of the sales tech stack, this market is dominated by vendors tightly integrated with major CRM platforms, especially Salesforce. Competition also comes from ERP vendors with deep manufacturing integration. The use of AI for guided selling and price optimization is a key trend.",
+                featureOverlaps: "CPQ is the upstream component to CLM (a quote becomes a contract). It integrates deeply with CRM (where the opportunity lives) and ERP (for product and inventory data).",
+                industryBodies: "N/A",
+                marketSizeLow: "$2.15 B (2024)",
+                marketSizeHigh: "$2.4 B (2024)",
+                avgCAGR: "~12-37%",
+                sources: "Various market reports",
+                companies: [
+                    { name: "Salesforce CPQ", website: "salesforce.com", size: "Salesforce: $37.9B Revenue", description: "A cloud-based configure, price, quote solution native to the Salesforce platform, enabling sales teams to create accurate and professional quotes quickly, from any device.", differentiator: "Native Salesforce Integration: Its primary differentiator is being a native Salesforce application, offering seamless integration with Sales Cloud for a unified lead-to-cash process within the world's largest CRM ecosystem." },
+                    { name: "Oracle CPQ", website: "oracle.com", size: "Oracle: $57.4B Revenue", description: "A cloud-based solution that helps companies streamline the entire quote-to-cash process, with powerful product configuration, pricing, and quoting capabilities.", differentiator: "Complex Configuration and ERP Integration: Differentiates with its powerful configuration engine, ideal for manufacturing and high-tech industries with complex products. It offers deep integration with Oracle's ERP and SCM clouds." },
+                    { name: "SAP CPQ", website: "sap.com", size: "SAP: $362.3B Market Cap", description: "Part of SAP's Customer Experience portfolio, it helps sales teams configure complex products, manage pricing, and generate quotes, integrating with SAP ERP and CRM systems.", differentiator: "Integration with SAP's Digital Core: Its key differentiator is its integration with the SAP S/4HANA digital core, connecting sales quoting with backend manufacturing, supply chain, and financial data." },
+                    { name: "Conga CPQ", website: "conga.com", size: "$388M Est. Revenue", description: "Provides a comprehensive CPQ solution on the Salesforce platform, designed to handle complex pricing scenarios and automate the quoting process as part of a unified revenue lifecycle.", differentiator: "Complex Revenue Lifecycle Management: Differentiates by handling highly complex pricing, billing, and revenue recognition scenarios. It is part of a broader suite that includes CLM, enabling a seamless transition from quote to contract." },
+                    { name: "Pricefx", website: "pricefx.com", size: "$88M Est. Revenue", description: "A cloud-native pricing and CPQ software company that provides a flexible, fast, and friendly platform for price management, optimization, and quoting.", differentiator: "Pricing Optimization and Analytics: Differentiates with its strong focus on pricing science and optimization. Its core strength lies in its powerful analytics and AI-driven tools for managing and optimizing complex pricing strategies." }
+                ]
+            },
+            {
+                id: 115,
+                symbol: "EXP",
+                name: "Expense Management Software",
+                category: "HR & Workforce",
+                description: "Software that automates the process of managing employee-initiated travel and entertainment (T&E) spend, from receipt capture and report submission to approval and reimbursement.",
+                industrySummary: "A large, well-established market dominated by SAP Concur. Competition comes from user-friendly solutions for SMBs (Expensify) and a new wave of integrated platforms that combine travel booking, corporate cards, and expenses into a single solution (Navan, Ramp), which represents the future of the market.",
+                featureOverlaps: "This category is converging with corporate card providers and travel booking platforms. It integrates deeply with accounting and ERP systems for reimbursement.",
+                industryBodies: "Global Business Travel Association (GBTA)",
+                marketSizeLow: "$3.60 B (2024)",
+                marketSizeHigh: "$7.64 B (2024)",
+                avgCAGR: "~10-13%",
+                sources: "Fortune Business Insights, various reports",
+                companies: [
+                    { name: "SAP Concur", website: "concur.com", size: "SAP: $362.3B Market Cap", description: "The market-leading provider of integrated travel, expense, and invoice management solutions, driven by a pursuit to simplify and automate these everyday processes.", differentiator: "Market Leadership and End-to-End T&E: Differentiates as the long-standing market leader with a comprehensive, end-to-end platform for managing all aspects of corporate travel and expenses, widely adopted by global enterprises." },
+                    { name: "Expensify", website: "expensify.com", size: "$169M Revenue (2022)", description: "An expense management platform that offers receipt scanning, expense reporting, and an integrated corporate card, popular with small and medium-sized businesses.", differentiator: "Simplicity and Automation for SMBs: Its key differentiator is its focus on a simple, user-friendly mobile experience with powerful automation features like SmartScan for receipt capture, making it a favorite among SMBs." },
+                    { name: "Navan", website: "navan.com", size: "$1.28B Total Funding", description: "An all-in-one travel, corporate card, and expense management solution that provides a seamless, AI-powered experience for employees and real-time visibility for finance teams.", differentiator: "Integrated Travel and Expense Platform: Its core differentiator is its unified platform that combines a modern corporate travel booking experience with integrated corporate cards and automated expense management." },
+                    { name: "Ramp", website: "ramp.com", size: "$1.41B Total Funding", description: "A finance automation platform that combines corporate cards, expense management, bill payments, and accounting automation into a single, all-in-one solution.", differentiator: "Finance Automation and Savings Focus: Differentiates by positioning itself as a 'finance automation platform' rather than just an expense tool. It uses AI to provide intelligent insights to help companies cut wasteful spending." },
+                    { name: "Emburse", website: "emburse.com", size: "850+ Employees", description: "A global leader in spend optimization, offering a portfolio of solutions including expense management, AP automation, and corporate cards to humanize work and control spend.", differentiator: "Portfolio of Specialized Solutions: Differentiates by offering a portfolio of distinct, best-in-class expense management solutions (including Certify and Chrome River), allowing it to cater to the specific needs of different market segments." }
+                ]
+            },
+            {
+                id: 116,
+                symbol: "FMS",
+                name: "Freelancer Management Platforms",
+                category: "HR & Workforce",
+                description: "Platforms for sourcing, onboarding, managing projects for, and paying independent contractors and freelance talent.",
+                industrySummary: "A rapidly expanding market driven by the gig economy. The landscape includes large freelance marketplaces with enterprise offerings (Upwork, Fiverr) and pure-play FMS vendors focused on managing private talent pools (WorkMarket). The line is blurring between FMS and VMS.",
+                featureOverlaps: "FMS overlaps with VMS (managing the extended workforce) and HRIS. The key distinction is FMS platforms often include talent sourcing/marketplace capabilities.",
+                industryBodies: "N/A",
+                marketSizeLow: "$4.5 B (2024)",
+                marketSizeHigh: "$6.0 B (2024)",
+                avgCAGR: "~14.5%",
+                sources: "Various market reports",
+                companies: [
+                    { name: "Upwork Enterprise", website: "upwork.com/enterprise/", size: "Upwork: $689.1M Revenue (2023)", description: "The enterprise offering from the world's largest work marketplace, providing a freelancer management system to help businesses find, hire, manage, and pay freelance talent.", differentiator: "Access to the World's Largest Talent Marketplace: Its primary differentiator is its direct, integrated access to Upwork's vast global marketplace of millions of skilled freelancers, combined with enterprise-grade compliance and management tools." },
+                    { name: "WorkMarket (by ADP)", website: "workmarket.com", size: "ADP: $19.2B Revenue", description: "An ADP company, is a freelancer management system that allows businesses to build and manage a private talent cloud of independent contractors, handling compliance, work orders, and payments.", differentiator: "Integration with ADP and Compliance Focus: Differentiates through its backing by ADP, offering deep expertise in worker classification, compliance, and payments. It focuses on helping enterprises build and manage their own private freelance talent pools securely." },
+                    { name: "Fiverr Business", website: "fiverr.com/business", size: "Fiverr: $361.4M Revenue (2023)", description: "Incorporates Stoke Talent, provides an FMS for businesses to source, manage, and pay their freelance vendors, with optional access to Fiverr's creative and digital services marketplace.", differentiator: "Access to Creative and Digital Freelance Marketplace: Differentiates by leveraging Fiverr's marketplace, which is particularly strong in creative, digital, and marketing services, providing a platform to manage these specific types of freelance engagements." },
+                    { name: "Toptal", website: "toptal.com", size: "1,001-5,000 Employees", description: "An exclusive network of the top freelance software developers, designers, finance experts, product managers, and project managers in the world.", differentiator: "Elite, Vetted Talent Network: Differentiates by being an exclusive, highly-vetted network. It focuses on providing access to the 'top 3%' of freelance talent in high-skill areas like software engineering and finance, rather than an open marketplace." },
+                    { name: "Catalant", website: "gocatalant.com", size: "201-500 Employees", description: "Provides a platform and services that connect companies with a network of over 70,000 independent consultants and experts for project-based work.", differentiator: "Focus on High-End Consulting and Expert Talent: Differentiates by focusing on high-end, strategic project work, connecting businesses with elite independent consultants, boutique firms, and subject matter experts." }
+                ]
+            }
+        ];
+
+        const categoryStyles = {
+            "Core Operations": { bg: "#E0F2FE", borderColor: "#7DD3FC" }, // Light Blue
+            "Procurement & Spend": { bg: "#E0E7FF", borderColor: "#A5B4FC" }, // Light Indigo
+            "HR & Workforce": { bg: "#D1FAE5", borderColor: "#6EE7B7" }, // Light Green
+            "Sales & Marketing": { bg: "#FEF3C7", borderColor: "#FCD34D" }, // Light Amber
+            "AI & Automation": { bg: "#FCE7F3", borderColor: "#F9A8D4" }  // Light Pink
+        };
+
+        const root = document.getElementById('market-table-root');
+        const gridContainer = document.getElementById('market-grid');
+        const modalBackdrop = document.getElementById('modal-backdrop');
+        const modalContent = document.getElementById('modal-content');
+        
+        let activeMarket = null;
+
+        function renderGrid() {
+            gridContainer.innerHTML = '';
+            marketData.forEach(market => {
+                const style = categoryStyles[market.category] || { bg: '#F3F4F6', borderColor: '#D1D5DB' };
+                const card = document.createElement('div');
+                card.className = 'element-card';
+                card.style.backgroundColor = style.bg;
+                card.style.borderColor = style.borderColor;
+                card.innerHTML = `
+                    <div class="symbol">${market.symbol}</div>
+                    <div class="name">${market.name}</div>
+                `;
+                card.addEventListener('click', () => showMarketModal(market));
+                gridContainer.appendChild(card);
+            });
+        }
+
+        function showMarketModal(market) {
+            activeMarket = market;
+            modalContent.innerHTML = `
+                <button class="modal-close-btn" onclick="closeModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <div class="modal-header">
+                    <h2>${market.name} (${market.symbol})</h2>
+                </div>
+                <div class="modal-body">
+                    <p>${market.description}</p>
+                    <div class="info-grid">
+                        <div><span>Market Size (2024)</span> ${market.marketSizeLow} - ${market.marketSizeHigh}</div>
+                        <div><span>Avg. CAGR</span> ${market.avgCAGR}</div>
+                        <div><span>Industry Summary</span> ${market.industrySummary}</div>
+                        <div><span>Feature Overlaps</span> ${market.featureOverlaps}</div>
+                        <div><span>Industry Bodies</span> ${market.industryBodies}</div>
+                        <div><span>Sources</span> ${market.sources}</div>
+                    </div>
+                    <h3>Key Companies</h3>
+                    <ul class="company-list">
+                        ${market.companies.map(company => `
+                            <li onclick='showCompanyModal(${JSON.stringify(company)})'>
+                                <div class="company-list-item-header">${company.name}</div>
+                                <small>${company.size}</small>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+            modalBackdrop.classList.add('visible');
+        }
+
+        window.showCompanyModal = function(company) {
+            modalContent.innerHTML = `
+                <button class="modal-close-btn" onclick="closeModal()">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <button class="back-button" onclick='showMarketModal(${JSON.stringify(activeMarket)})'>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    Back to Market Overview
+                </button>
+                <div class="modal-header">
+                    <h2>${company.name}</h2>
+                </div>
+                <div class="modal-body">
+                     <div class="info-grid">
+                        <div><span>Website</span> <a href="https://${company.website}" target="_blank">${company.website}</a></div>
+                        <div><span>Company Size</span> ${company.size}</div>
+                    </div>
+                    <h3>Description</h3>
+                    <p>${company.description}</p>
+                    <h3>Differentiator</h3>
+                    <p>${company.differentiator}</p>
+                </div>
+            `;
+        }
+
+        window.closeModal = function() {
+            modalBackdrop.classList.remove('visible');
+        }
+
+        // Close modal on backdrop click
+        modalBackdrop.addEventListener('click', (e) => {
+            if (e.target === modalBackdrop) {
+                closeModal();
+            }
+        });
+
+        // Initial render
+        renderGrid();
+    })();
+    </script>
+
+</body>
+</html>
+```
